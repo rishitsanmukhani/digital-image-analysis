@@ -20,7 +20,7 @@ public:
 	Image(string _name=""){
 		name=_name;
 	}
-	void loadImage(bool gray_scale=false){
+	void loadImage(bool gray_scale=true){
 		if(gray_scale)mat=imread(name,CV_LOAD_IMAGE_GRAYSCALE);
 		else mat=imread(name,CV_LOAD_IMAGE_COLOR);
 		if(mat.empty()){
