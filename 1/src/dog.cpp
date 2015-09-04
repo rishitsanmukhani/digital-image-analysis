@@ -74,53 +74,6 @@ void dogSelf(int N=11,double sigma=11,double sigma1=1){
 	imwrite("dog.bmp",img.mat-img1.mat);
 	puts("Done.");
 }
-void canneyEdgePreprocessing(Image& in,int ksize=3){
-	puts("Gaussian blur...");
-	GaussianBlur( in.mat, in.mat, Size(ksize,ksize), 0, 0, BORDER_DEFAULT );
-	Mat grad_x, grad_y;
-	Mat abs_grad_x, abs_grad_y;
-	puts("Sobel gradient...");
-	Sobel(in.mat, grad_x, CV_32F,1,0,3);
-	convertScaleAbs(grad_x,abs_grad_x);
-	Sobel(in.mat, grad_y, CV_32F,0,1,3);
-	convertScaleAbs(grad_y,abs_grad_y);
-	puts("Adding two gradients...");
-	addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, in.mat);
-	puts("Non maximum suppressing...");
-	for(int i=1;i<in.h-1;i++){
-		for(int j=1;j<in.w-1;j++){
-			float deg;
-			if(abs(grad_x.at<float>(i,j)-1e5)>0)
-			deg=atan(abs_grad_y.at<float>(i,j)/abs_grad_x.at<float>(i,j))*180/PI;
-			else deg=90;
-			deg = deg/45;
-			int flag=int(round(deg));
-			if(flag==-2)flag=2;
-			switch(flag){
-				case 0:{
-					if(in.mat.at<float>(i,j)<in.mat.at<float>(i,j-1) || in.mat.at<float>(i,j)<in.mat.at<float>(i,j+1)){
-						// in.mat.at<float>(i,j)=0;
-					}
-				}
-				case 1:{
-					if(in.mat.at<float>(i,j)<in.mat.at<float>(i-1,j+1) || in.mat.at<float>(i,j)<in.mat.at<float>(i+1,j-1)){
-						// in.mat.at<float>(i,j)=0;
-					}
-				}
-				case -1:{
-					if(in.mat.at<float>(i,j)<in.mat.at<float>(i-1,j-1) || in.mat.at<float>(i,j)<in.mat.at<float>(i+1,j+1)){
-						// in.mat.at<float>(i,j)=0;
-					}
-				}
-				case 2:{
-					if(in.mat.at<float>(i,j)<in.mat.at<float>(i-1,j) || in.mat.at<float>(i,j)<in.mat.at<float>(i+1,j)){
-						// in.mat.at<float>(i,j)=0;
-					}
-				}
-			}
-		}
-	}
-}
 void hysteresis(Image &in,uint8_t lower,uint8_t upper){
 	puts("Removing weak edges...");
 	Mat tmp=in.mat.clone();
@@ -138,7 +91,6 @@ void hysteresis(Image &in,uint8_t lower,uint8_t upper){
 	for(int i=0;i<in.h;++i){
 		for(int j=0;j<in.w;++j){
 			uchar& c=in.mat.at<uchar>(i,j);
-			// cout<<int(c)<<endl;
 			if(c<lower){
 				c=0;continue;
 			}
@@ -170,8 +122,7 @@ int main(int argc,char** argv){
 	}
 	Image img1(argv[1]);
 	img1.loadImage(true);
-	// dogOpenCV(img1,atoi(argv[2]),atoi(argv[3]));
-	canneyEdgePreprocessing(img1);
+	dogOpenCV(img1,atoi(argv[2]),atoi(argv[3]));
 	hysteresis(img1,atoi(argv[4]),atoi(argv[5]));
 	img1.writeImage("edge.bmp");
 	return 0;
