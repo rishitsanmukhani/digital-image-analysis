@@ -1,7 +1,12 @@
+#include <iostream>
+#include <string>
+#include <sstream>
 #include "image.cpp"
 #include "histogram.cpp"
-#define MAX_INTENSITY 255
 using namespace std;
+
+#define MAX_INTENSITY 255
+#define PI 3.14159265
 
 void applyMask(float** mask,int N,Image* img,double bias=0){
 	assert(N%2 && "Size should be odd.");
@@ -23,4 +28,9 @@ void applyMask(float** mask,int N,Image* img,double bias=0){
 			img->mat.at<uchar>(i,j)=(uint8_t)sum;
 		}
 	}
+}
+template <typename T> string to_string(const T& n){
+	ostringstream stm;
+	stm<<n;
+	return stm.str();
 }

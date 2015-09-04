@@ -14,3 +14,15 @@ all: $(FILE)
 
 run:
 	$(OUT)
+
+median_cut:
+	$(CC) $(LIBRARY_PATHS) $(INCLUDE_PATHS) $(LIBS) median_cut.cpp -o median_cut
+
+emboss:
+	$(CC) $(LIBRARY_PATHS) $(INCLUDE_PATHS) $(LIBS) emboss.cpp -o emboss
+
+segment:
+	$(CC) $(LIBRARY_PATHS) $(INCLUDE_PATHS) $(LIBS) segment.cpp -o segment	
+
+dog:
+	$(CC) $(LIBRARY_PATHS) $(INCLUDE_PATHS) $(LIBS) dog.cpp -o dog	
