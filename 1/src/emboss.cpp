@@ -1,23 +1,11 @@
-#include "image.cpp"
-#include "histogram.cpp"
 #include "util.cpp"
-#include <string>
-#include <stack>
-#include <sstream>
-#define RED 0
-#define GREEN 1
-#define BLUE 2
-#define PI 3.14159265
-template <typename T> string to_string(const T& n){
-	ostringstream stm;
-	stm<<n;
-	return stm.str();
-}
+
 int main(int argc,char** argv){
 	if(argc<2){
 		puts("Invalid arguments!");
 		exit(1);
 	}
+	puts("Generating mask...");
 	float** mask;
 	mask=new float*[3];
 	for(int i=0;i<3;i++)
@@ -31,10 +19,12 @@ int main(int argc,char** argv){
 	mask[2][2]=1;
 	mask[1][2]=1;
 	mask[2][1]=1;
+	puts("Applying emboss filter...");
 	Image img1(argv[1]);
 	img1.loadImage(true);
 	applyMask(mask,3,&img1,MAX_INTENSITY>>1);
+	puts("Writing image...");
 	img1.writeImage("emboss.bmp");
-	
+	puts("Done.");
 	return 0;
 }

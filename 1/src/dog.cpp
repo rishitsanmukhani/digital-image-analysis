@@ -1,18 +1,6 @@
 #include "image.cpp"
 #include "histogram.cpp"
-#include <string>
-#include <stack>
-#include <sstream>
-#define RED 0
-#define GREEN 1
-#define BLUE 2
-#define MAX_INTENSITY 255
-#define PI 3.14159265
-template <typename T> string to_string(const T& n){
-	ostringstream stm;
-	stm<<n;
-	return stm.str();
-}
+#include "util.cpp"
 float** getGaussianMask(int N,double sigma=-1){
 	assert(N%2 && "Size should be odd.");
 	if(sigma<=0)sigma=0.3*((N-1)*0.5-1)+0.8;
@@ -35,25 +23,6 @@ float** getGaussianMask(int N,double sigma=-1){
 		}
 	}
 	return m;
-}
-void applyMask(float** mask,int N,Image* img){
-	assert(N%2 && "Size should be odd.");
-	assert(img!=NULL && mask!=NULL);
-	Mat tmp=img->mat.clone();
-	for(int i=0;i<img->h;++i){
-		for(int j=0;j<img->w;++j){
-			int x=i-(N>>1),y=j-(N>>1);
-			double sum=0;
-			for(int m=0;m<N;m++){
-				for(int n=0;n<N;n++){
-					if(x+m<0 || x+m>=img->h)continue;
-					if(y+n<0 || y+n>=img->w)continue;
-					sum += tmp.at<uchar>(x+m,y+n)*mask[m][n];
-				}
-			}
-			img->mat.at<uchar>(i,j)=(uint8_t)sum;
-		}
-	}
 }
 void dogOpenCV(Image& in,int ksize1,int ksize2){
 	Mat m1=in.mat.clone(),m2=in.mat.clone();

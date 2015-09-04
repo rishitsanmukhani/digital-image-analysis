@@ -3,12 +3,6 @@
 #include "opencv2/opencv.hpp"
 #include "opencv2/core/core.hpp"
 #include <iostream>
-#include <vector>
-#include <algorithm>
-#include <set>
-#include <map>
-#include <cstdlib>
-#include <cassert>
 
 using namespace std;
 using namespace cv;
