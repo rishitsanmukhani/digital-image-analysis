@@ -7,18 +7,29 @@
 using namespace cv;
 using namespace std;
 
-void scaleDown(Mat& in,Mat& out){
+void scaleDownDecimation(Mat& in,Mat& out){
 	puts("Scaling down...");
 	for(int i=0;i<out.rows;i++){
 		for(int j=0;j<out.cols;j++){
 			Vec3b& rgba= out.at<Vec3b>(i,j);
-			rgba=(Vec3i(in.at<Vec3b>(i<<1,j<<1))+Vec3i(in.at<Vec3b>(i<<1,j<<1))+Vec3i(in.at<Vec3b>(i<<1,j<<1))+Vec3i(in.at<Vec3b>(i<<1,j<<1)))/4;
+			rgba=(Vec3i(in.at<Vec3b>(i<<1,j<<1))+Vec3i(in.at<Vec3b>((i<<1) + 1,j<<1))+Vec3i(in.at<Vec3b>(i<<1,(j<<1) + 1))+Vec3i(in.at<Vec3b>((i<<1) + 1,(j<<1) + 1)))/4;
 		}
 	}
 	puts("Scaling down done");
 }
 
-void scaleUp(Mat& in,Mat& out){
+void scaleDownSkip(Mat& in,Mat& out){
+	puts("Scaling down...");
+	for(int i=0;i<out.rows;i++){
+		for(int j=0;j<out.cols;j++){
+			Vec3b& rgba= out.at<Vec3b>(i,j);
+			rgba=Vec3i(in.at<Vec3b>(i<<1,j<<1));
+		}
+	}
+	puts("Scaling down done");
+}
+
+void scaleUpInterpolation(Mat& in,Mat& out){
 	puts("Scaling up...");
 
 	puts("Interpolating one dimension...");
@@ -45,6 +56,31 @@ void scaleUp(Mat& in,Mat& out){
 	puts("Done");
 	puts("Scaling up done");
 }
+
+void scaleUpReplication(Mat& in,Mat& out){
+	puts("Scaling up...");
+
+	puts("Replicating one dimension...");
+	for(int i=0;i<out.rows;i+=2){
+		for(int j=0;j<out.cols;j+=2){
+			out.at<Vec3b>(i,j) = Vec3i(in.at<Vec3b>(i>>1,j>>1));
+			out.at<Vec3b>(i,j+1) = Vec3i(in.at<Vec3b>(i>>1,j>>1));			
+		}
+	}
+	puts("Done");
+	puts("Replicating second dimension...");
+	for(int i=1;i<out.rows-1;i+=2){
+		for(int j=0;j<out.cols;j++){
+			out.at<Vec3b>(i,j)=Vec3i(out.at<Vec3b>(i-1,j));
+		}
+	}
+	for(int j=0,i=out.rows-1;j<out.cols;j++){
+		out.at<Vec3b>(i,j)=out.at<Vec3b>(i-1,j);
+	}
+	puts("Done");
+	puts("Scaling up done");
+}
+
 int main(int argc, char** argv){
 	if(argc<2){
 		puts("Usage: a <name-of-image>");
@@ -56,12 +92,23 @@ int main(int argc, char** argv){
 		return -1;
 	}
 	Mat out1(in.rows/2,in.cols/2,CV_8UC3,Scalar(0,0,0));
-	Mat out2(in.rows<<1,in.cols<<1,CV_8UC3,Scalar(0,0,0));
-	scaleDown(in,out1);
-	scaleUp(in,out2);
+	Mat out2(in.rows/2,in.cols/2,CV_8UC3,Scalar(0,0,0));
+	Mat out3(in.rows<<1,in.cols<<1,CV_8UC3,Scalar(0,0,0));
+	Mat out4(in.rows<<1,in.cols<<1,CV_8UC3,Scalar(0,0,0));
+
+	scaleDownDecimation(in,out1);
+	scaleDownSkip(in,out2);
+
+	scaleUpInterpolation(in,out3);
+	scaleUpReplication(in,out4);
+
 	
-	imwrite("small.bmp",out1);
-	imwrite("big.bmp",out2);
+	imwrite("smallDecimation.bmp",out1);
+	imwrite("smallSkip.bmp",out2);
+
+	imwrite("bigInterpolation.bmp",out3);
+	imwrite("bigReplication.bmp",out4);
+
 	puts("Images saved");
 	waitKey(0);
 	return 0;
