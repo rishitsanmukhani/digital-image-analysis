@@ -12,7 +12,7 @@
 using namespace cv;
 using namespace std;
 
-int numClusters1D = 4;
+int numClusters1D;
 int numClusterTotal;
 int** clusterAvg;
 int sizex,sizey;
@@ -298,7 +298,7 @@ void mergeClusters(){
 				int dev = abs(clusterAvg[i][0]-clusterAvg[j][0]);
 				dev += abs(clusterAvg[i][1]-clusterAvg[j][1]);
 				dev += abs(clusterAvg[i][2]-clusterAvg[j][2]);
-				if (dev < 120){
+				if (dev < 40){
 				// if (dev < (2*255/numClusterTotal)){
 					clusterAvg[i][0] = (clusterFreq[i]*clusterAvg[i][0] + clusterFreq[j]*clusterAvg[j][0])/(clusterFreq[i]+clusterFreq[j]);
 					clusterAvg[i][1] = (clusterFreq[i]*clusterAvg[i][1] + clusterFreq[j]*clusterAvg[j][1])/(clusterFreq[i]+clusterFreq[j]);
@@ -483,24 +483,21 @@ void iterate(Mat& im, Mat& segmentedImage, Mat& patternImage, Mat& silhoutteImag
 		colors = new int*[numClustersTotalFinal];
 		for (int i = 0; i < numClustersTotalFinal; ++i){
 			colors[i] = new int[3];
-			int numRG = numClustersTotalFinal/3;
-			int gradRG = 255/numRG;
-			int numB = numClustersTotalFinal-2*numRG;
-			int gradB = 255/numB;
-			if(i<numRG){
-				colors[i][0] = (i+1)*gradRG;
-				colors[i][1] = 0;
-				colors[i][2] = 0;
+			int rSum = 0, gSum = 0, bSum = 0;
+			for(int j = 0; j < regionsAll[i].points.size(); j++){
+				rSum += im.at<cv::Vec3b>(regionsAll[i].points[j].first, regionsAll[i].points[j].second)[0];
+				gSum += im.at<cv::Vec3b>(regionsAll[i].points[j].first, regionsAll[i].points[j].second)[1];
+				bSum += im.at<cv::Vec3b>(regionsAll[i].points[j].first, regionsAll[i].points[j].second)[2];
 			}
-			else if(i<2*numRG){
-				colors[i][1] = (i-numRG+1)*gradRG;
-				colors[i][0] = 0;
-				colors[i][2] = 0;
+			if(regionsAll[i].points.size()!=0){
+				colors[i][0] = rSum/regionsAll[i].points.size();
+				colors[i][1] = gSum/regionsAll[i].points.size();
+				colors[i][2] = bSum/regionsAll[i].points.size();
 			}
 			else{
-				colors[i][2] = (i-2*numRG+1)*gradB;
 				colors[i][0] = 0;
 				colors[i][1] = 0;
+				colors[i][2] = 0;
 			}
 		}
 
@@ -551,11 +548,13 @@ void iterate(Mat& im, Mat& segmentedImage, Mat& patternImage, Mat& silhoutteImag
 int main(int argc, char** argv)
 {
 	Mat im1, edgeCanny;
-	if (argc>1){
+	if (argc>2){
 		im1 = imread(argv[1],CV_LOAD_IMAGE_UNCHANGED);
+		numClusters1D = atoi(argv[2]);
 	}
 	else{
-		cout << "enter image name" << endl;
+		printf("Usage: <name> <cluster>");
+		exit(1);
 	}
 
 	// cout << im1.rows << " " << im1.cols << endl;
