@@ -298,7 +298,7 @@ void mergeClusters(){
 				int dev = abs(clusterAvg[i][0]-clusterAvg[j][0]);
 				dev += abs(clusterAvg[i][1]-clusterAvg[j][1]);
 				dev += abs(clusterAvg[i][2]-clusterAvg[j][2]);
-				if (dev < 120){
+				if (dev < 40){
 				// if (dev < (2*255/numClusterTotal)){
 					clusterAvg[i][0] = (clusterFreq[i]*clusterAvg[i][0] + clusterFreq[j]*clusterAvg[j][0])/(clusterFreq[i]+clusterFreq[j]);
 					clusterAvg[i][1] = (clusterFreq[i]*clusterAvg[i][1] + clusterFreq[j]*clusterAvg[j][1])/(clusterFreq[i]+clusterFreq[j]);
