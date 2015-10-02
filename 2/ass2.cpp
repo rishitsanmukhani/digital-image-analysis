@@ -89,8 +89,8 @@ int dot2(Point& A, Point& B){
 
 void CallBackFunc1(int event, int x, int y, int flags, void* userdata){
      if  ( event == EVENT_LBUTTONDOWN )
-     {
-          cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+     { 
+     	// cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
           Point fp(x,y);
           features1.push_back(fp);
           Scalar color(0, 0, 255);
@@ -103,7 +103,7 @@ void CallBackFunc1(int event, int x, int y, int flags, void* userdata){
 void CallBackFunc2(int event, int x, int y, int flags, void* userdata){
     if  ( event == EVENT_LBUTTONDOWN )
     {
-      cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+      // cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
       Point fp(x,y);
       features2.push_back(fp);
       Scalar color(0, 0, 255);
@@ -192,21 +192,25 @@ Point getPointFromBaryCoord(Point& A, Point& B, Point& C, pair<double,double> bc
     return pt;
 }
 
-void morph(float wt1){
+pair<Mat,vector<Point> > morph(vector<Mat*> img, vector<vector<Point>*>& features, vector<float>& wt){
 
-	Scalar red(0,0,255);
-	Rect rectMorphed(0, 0, img1.cols, img1.rows);
+	Mat imgMorphed(img[0]->rows,img[0]->cols, CV_8UC3, Scalar(0,0,0));
+	Rect rectMorphed(0, 0, img[0]->cols, img[0]->rows);
 	Subdiv2D subdivMorphed(rectMorphed);
 	vector<Point> featuresMorphed;
+	Scalar red(0,0,255);
 
-    for(int i = 0; i < features1.size(); ++i){
-        Point pt(cvRound(wt1*features1[i].x + (1-wt1)*features2[i].x) , cvRound(wt1*features1[i].y + (1-wt1)*features2[i].y));
+    for(int i = 0; i < features[0]->size(); ++i){
+    	float x = 0, y = 0;
+    	for(int i1 = 0; i1 < features.size(); ++i1){
+    		x += wt[i1] * (*features[i1])[i].x;
+    		y += wt[i1] * (*features[i1])[i].y;
+    	}
+        Point pt(x,y);
         featuresMorphed.push_back(pt);
         subdivMorphed.insert(pt);
         circle( imgMorphed, pt, 2, red, FILLED, LINE_8, 0 );
-
     }
-    imshow("imgMorphed",imgMorphed);
 
     for(int x = 1; x < imgMorphed.cols-1; ++x){
         for(int y = 1; y < imgMorphed.rows-1; ++y){
@@ -243,23 +247,17 @@ void morph(float wt1){
 
                     pair<double,double> bc = getBaryCoord(v1_int,v2_int,v3_int,fp);
 
-                    Point img1_v1 = features1[ind1];
-                    Point img1_v2 = features1[ind2];
-                    Point img1_v3 = features1[ind3];
-                    Point img2_v1 = features2[ind1];
-                    Point img2_v2 = features2[ind2];
-                    Point img2_v3 = features2[ind3];
+                    for(int k = 0; k < features.size(); ++k){
+                    	Point img_v1 = (*features[k])[ind1];
+	                    Point img_v2 = (*features[k])[ind2];
+	                    Point img_v3 = (*features[k])[ind3];
 
-                    Point img1_v = getPointFromBaryCoord(img1_v1,img1_v2,img1_v3,bc);
-                    Point img2_v = getPointFromBaryCoord(img2_v1,img2_v2,img2_v3,bc);
+	                    Point img_v = getPointFromBaryCoord(img_v1,img_v2,img_v3,bc);
 
-                    // cout << "b " << bc.first << " " << bc.second << endl;
-
-                    // cout << "dsfsd " << img1_v.x << " " << img1_v.y << " " << img2_v.x << " " << img2_v.y << endl;
-                    imgMorphed.at<Vec3b>(y,x)[0] = wt1*img1.at<Vec3b>(img1_v.y,img1_v.x)[0] + (1-wt1)*img2.at<Vec3b>(img2_v.y,img2_v.x)[0];
-                    imgMorphed.at<Vec3b>(y,x)[1] = wt1*img1.at<Vec3b>(img1_v.y,img1_v.x)[1] + (1-wt1)*img2.at<Vec3b>(img2_v.y,img2_v.x)[1];
-                    imgMorphed.at<Vec3b>(y,x)[2] = wt1*img1.at<Vec3b>(img1_v.y,img1_v.x)[2] + (1-wt1)*img2.at<Vec3b>(img2_v.y,img2_v.x)[2];
-
+	                    imgMorphed.at<Vec3b>(y,x)[0] += wt[k]*img[k]->at<Vec3b>(img_v.y,img_v.x)[0];
+	                    imgMorphed.at<Vec3b>(y,x)[1] += wt[k]*img[k]->at<Vec3b>(img_v.y,img_v.x)[1];
+	                    imgMorphed.at<Vec3b>(y,x)[2] += wt[k]*img[k]->at<Vec3b>(img_v.y,img_v.x)[2];
+                    }
                 }
             }
             else if(loc==Subdiv2D::PTLOC_VERTEX){
@@ -267,31 +265,92 @@ void morph(float wt1){
             }
         }
     }
+
+    imshow("imgMorphed",imgMorphed);
+	waitKey(30);
+	return make_pair(imgMorphed, featuresMorphed);
 }
 
-void traversePath(int numFaces, Point center, int radius){
+void traversePath(vector<Mat*> images, vector<vector<Point>*>& features, bool traveseAll){
 	//Initializing
-	Scalar black(0,0,0);
-    Point rectSize(400,400);
-    int radius = min(rectSize.x,rectSize.y)/2 - 5;
-    Point center(rectSize.x/2,rectSize.y/2);
-    imgPath = new Mat(rectSize.x,rectSize.y,CV_8UC3,black);
-    circle( *imgPath, center, radius, Scalar( 0, 0, 255 ), 2, LINE_8 );
-    for(int i = 0; i < numFaces; ++i){
-    	double angle = 6.14*i/numFaces;
-    	int x = int(center.x + radius*cos(angle));
-    	int y = int(center.x + radius*sin(angle));
-    	circle( *imgPath, Point(x,y), 5, Scalar( 255, 255, 255 ), -1, LINE_8 );
-    }
-    imshow("imgPath",*imgPath);
-    
-    //Waiting for path input through mouse
-    waitKey(0);
+	int numFaces = images.size();
 
-    for(int i = 0; i < path.size(); ++i){
-    	double angle = atan2(path[i].y-center.y, path[i].x-center.x);
-    	
+    if(traveseAll){
+    	for(int i = 0; i < numFaces-1; ++i){
+    		vector<Mat*> imagesToMorph;
+				imagesToMorph.push_back(images[i]);
+				imagesToMorph.push_back(images[i+1]);
+			vector<vector<Point>*> featuresToMorph;
+		    	featuresToMorph.push_back(features[i]);
+		    	featuresToMorph.push_back(features[i+1]);
+    		for(float wt1 = 0; wt1 <= 1; wt1+=0.05){
+		    	vector<float> wt; 
+			    	wt.push_back(wt1);
+			    	wt.push_back(1-wt1);
+				morph(images,features,wt);
+		    }
+    	}
     }
+    else{
+    	Scalar black(0,0,0);
+	    Point rectSize(400,400);
+	    int radius = min(rectSize.x,rectSize.y)/2 - 5;
+	    Point center(rectSize.x/2,rectSize.y/2);
+	    imgPath = new Mat(rectSize.x,rectSize.y,CV_8UC3,black);
+	    circle( *imgPath, center, radius, Scalar( 0, 0, 255 ), 2, LINE_8 );
+	    vector<Point> locOfImgOnPath;
+
+	    for(int i = 0; i < numFaces; ++i){
+	    	double angle = 6.28*i/numFaces;
+	    	int x = int(center.x + radius*cos(angle));
+	    	int y = int(center.x + radius*sin(angle));
+	    	locOfImgOnPath.push_back(Point(x,y));
+	    	circle( *imgPath, Point(x,y), 5, Scalar( 255, 255, 255 ), -1, LINE_8 );
+	    	line( *imgPath, Point(x,y), center, Scalar(255,0,0), 1, LINE_AA, 0);
+	    }
+	    circle( *imgPath, center, 5, Scalar( 255, 255, 255 ), -1, LINE_8 );
+	    imshow("imgPath",*imgPath);
+
+	    vector<float> wt; 
+		for(int i = 0; i < numFaces; ++i)
+			wt.push_back(1.0/images.size());
+
+	    pair<Mat,vector<Point> > m = morph(images, features, wt);
+	    Mat allMorphed = m.first;
+	    vector<Point> featuresAllMorphed = m.second;
+	    imshow("allMorphed", allMorphed);
+	    
+    	//Waiting for path input through mouse
+    	waitKey(0);
+
+	    for(int i = 0; i < path.size(); ++i){
+	    	double angle = atan2(path[i].y-center.y, path[i].x-center.x);
+	    	if(angle<0)
+	    		angle = 6.28 + angle;
+	    	int section = angle/(6.28/numFaces);
+	    	vector<float> wtToMorph;
+	    	if(numFaces>2){
+	    		pair<double,double> bc = getBaryCoord(center, locOfImgOnPath[section], locOfImgOnPath[section+1], path[i]);
+		    	double totalWt = 1+bc.first+bc.second; 
+				wtToMorph.push_back(1-bc.first-bc.second/totalWt);
+				wtToMorph.push_back(bc.first/totalWt);
+				wtToMorph.push_back(bc.second/totalWt);
+	    	}
+	    	else if(numFaces==2){
+	    		cout << "can't traversePath for less than 3 images!" << endl;
+	    		exit(0);
+	    	}
+			vector<Mat*> imagesToMorph;
+				imagesToMorph.push_back(&allMorphed);
+				imagesToMorph.push_back(images[section]);
+				imagesToMorph.push_back(images[section+1]);
+			vector<vector<Point>*> featuresToMorph;
+				featuresToMorph.push_back(&featuresAllMorphed);
+		    	featuresToMorph.push_back(features[section]);
+		    	featuresToMorph.push_back(features[section+1]);
+	    	morph(imagesToMorph,featuresToMorph,wtToMorph);
+	    }
+	}
 
 }
 
@@ -306,7 +365,7 @@ int main( int, char** )
      setMouseCallback("img1", CallBackFunc1, NULL);
      setMouseCallback("img2", CallBackFunc2, NULL);
      setMouseCallback("imgPath", CallBackFunc3, NULL);
-/*
+
     Scalar blue(255,0,0);
 
     img1 = imread("emma1.jpg");
@@ -318,9 +377,6 @@ int main( int, char** )
     Size size(int(aspect*minCol),minCol);
     resize(img1,img1,size);
     resize(img2,img2,size);
-
-    Mat M(img1.rows,img1.cols, CV_8UC3, Scalar(0,0,0));
-    imgMorphed = M.clone();
 
     Rect rect(0, 0, img1.cols, img1.rows); // first 2 are start points, next 2 are width and height, 
     //the top and left boundary of the rectangle are inclusive, while the right and bottom boundaries are not
@@ -346,27 +402,31 @@ int main( int, char** )
     features2.push_back(br);
 
     for( int i = 0; i < features1.size(); i++ )
-    {
         subdiv.insert(features1[i]);
-    }
 
     getTriangleList(subdiv);
-    // for(int i = 0 ; i < trianglesInd.size(); ++i){
-    //     cout << trianglesInd[i].a << " " << trianglesInd[i].b << " " << trianglesInd[i].c << endl;
-    // }
 
     // draw_delaunay1(blue);
     // draw_delaunay2(blue);
     imshow( "img1", img1 );
     imshow( "img2", img2 );
 
+    
+    vector<Mat*> images;
+		images.push_back(&img1);
+		images.push_back(&img2);
+	vector<vector<Point>*> features;
+    	features.push_back(&features1);
+    	features.push_back(&features2);
+    /*
     for(float wt1 = 0; wt1 <= 1; wt1+=0.05){
-		morph(wt1);
-		imshow("imgMorphed",imgMorphed);
-		waitKey(100);
+    	vector<float> wt; 
+    	wt.push_back(wt1);
+    	wt.push_back(1-wt1);
+		morph(images,features,wt);
     }
-*/
-    traversePath(6);
+	*/
+    traversePath(images,features,true);
 
     waitKey(0);
 
