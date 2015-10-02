@@ -1,9 +1,10 @@
-#include "C:\opencv\build\include\opencv2\highgui\highgui.hpp"
-#include "C:\opencv\build\include\opencv2\imgproc\imgproc_c.h"
-#include "C:\opencv\build\include\opencv2\imgproc\imgproc.hpp"
-#include "C:\opencv\build\include\opencv2\core\core_c.h"
+#include "opencv2\highgui\highgui.hpp"
+#include "opencv2\imgproc\imgproc_c.h"
+#include "opencv2\imgproc\imgproc.hpp"
+#include "opencv2\core\core_c.h"
 #include <math.h>
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 using namespace cv;
@@ -90,12 +91,12 @@ int dot2(Point& A, Point& B){
 void CallBackFunc1(int event, int x, int y, int flags, void* userdata){
      if  ( event == EVENT_LBUTTONDOWN )
      { 
-     	// cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-          Point fp(x,y);
-          features1.push_back(fp);
-          Scalar color(0, 0, 255);
-          circle( img1, fp, 2, color, FILLED, LINE_8, 0 );
-          imshow("img1", img1);
+     	cout <<  x << " " << y << endl;
+		Point fp(x,y);
+		features1.push_back(fp);
+		Scalar color(0, 0, 255);
+		circle( img1, fp, 2, color, FILLED, LINE_8, 0 );
+		imshow("img1", img1);
 
      }
  }
@@ -103,13 +104,12 @@ void CallBackFunc1(int event, int x, int y, int flags, void* userdata){
 void CallBackFunc2(int event, int x, int y, int flags, void* userdata){
     if  ( event == EVENT_LBUTTONDOWN )
     {
-      // cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-      Point fp(x,y);
-      features2.push_back(fp);
-      Scalar color(0, 0, 255);
-      circle( img2, fp, 2, color, FILLED, LINE_8, 0 );
-      imshow("img2", img2);
-
+    	cout <<  x << ", " << y << endl;
+		Point fp(x,y);
+		features2.push_back(fp);
+		Scalar color(0, 0, 255);
+		circle( img2, fp, 2, color, FILLED, LINE_8, 0 );
+		imshow("img2", img2);
     }
 }
 
@@ -131,7 +131,6 @@ void CallBackFunc3(int event, int x, int y, int flags, void* userdata){
     	}
     }
 }
-
 
 void draw_delaunay1(Scalar delaunay_color){
     vector<Point> pt(3);
@@ -291,6 +290,9 @@ void traversePath(vector<Mat*> images, vector<vector<Point>*>& features, bool tr
 		    }
     	}
     }
+    else if(numFaces==2){
+		cout << "can't traversePath for less than 3 images!" << endl;
+	}
     else{
     	Scalar black(0,0,0);
 	    Point rectSize(400,400);
@@ -319,7 +321,7 @@ void traversePath(vector<Mat*> images, vector<vector<Point>*>& features, bool tr
 	    Mat allMorphed = m.first;
 	    vector<Point> featuresAllMorphed = m.second;
 	    imshow("allMorphed", allMorphed);
-	    
+
     	//Waiting for path input through mouse
     	waitKey(0);
 
@@ -336,10 +338,6 @@ void traversePath(vector<Mat*> images, vector<vector<Point>*>& features, bool tr
 				wtToMorph.push_back(bc.first/totalWt);
 				wtToMorph.push_back(bc.second/totalWt);
 	    	}
-	    	else if(numFaces==2){
-	    		cout << "can't traversePath for less than 3 images!" << endl;
-	    		exit(0);
-	    	}
 			vector<Mat*> imagesToMorph;
 				imagesToMorph.push_back(&allMorphed);
 				imagesToMorph.push_back(images[section]);
@@ -351,11 +349,23 @@ void traversePath(vector<Mat*> images, vector<vector<Point>*>& features, bool tr
 	    	morph(imagesToMorph,featuresToMorph,wtToMorph);
 	    }
 	}
+}
 
+void fillFeatures(string filename, vector<Point>* features){
+	ifstream in(filename.c_str());
+	while(!in.eof()){
+		int x,y;
+		in >> x >> y;
+		features->push_back(Point(x,y));
+	}
 }
 
 int main( int, char** )
 {
+	string file1 = "emma1";
+	string file2 = "mark";
+	string jpg = ".jpg";
+	string txt = ".txt";
     
      //Create a window
      namedWindow("img1", 1);
@@ -368,13 +378,16 @@ int main( int, char** )
 
     Scalar blue(255,0,0);
 
-    img1 = imread("emma1.jpg");
-    img2 = imread("mark.jpg");
+    img1 = imread(file1+jpg);
+    img2 = imread(file2+jpg);
+    /*
     float aspect1 = float(img1.rows)/img1.cols;
     float aspect2 = float(img2.rows)/img2.cols;
     float aspect = (aspect1+aspect2)/2;
     int minCol = min(img1.cols,img2.cols);
     Size size(int(aspect*minCol),minCol);
+    */
+    Size size(300,300);
     resize(img1,img1,size);
     resize(img2,img2,size);
 
@@ -386,7 +399,9 @@ int main( int, char** )
     imshow("img1", img1);
     imshow("img2", img2);
 
-    waitKey(0);
+    fillFeatures(file1+txt, &features1);
+    fillFeatures(file2+txt, &features2);
+    // waitKey(0);
 
     Point tl(0,0);
     Point tr(img1.cols-1,0);
