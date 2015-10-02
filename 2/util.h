@@ -9,6 +9,7 @@ using namespace std;
 #define pb push_back
 #define mp make_pair
 
+
 void applyMask(float** mask,int N,Image* img,double bias=0){
 	assert(N%2 && "Size should be odd.");
 	assert(img!=NULL && mask!=NULL);
