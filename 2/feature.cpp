@@ -1,12 +1,5 @@
 #include "median_cut.h"
-void detectEyes(Image& img){
-  for(int i=0;i<img.h;i++){
-    for(int j=0;j<img.w;j++){
-      Vec3b& bgr = img.mat.at<Vec3b>(i,j);
 
-    }
-  }
-}
 void cropFace(Image& img){
   quantize(img);
   Image ref("median.bmp");
@@ -40,5 +33,7 @@ int main(int argc,char** argv){
   cropFace(img);
   detectEyes(img);
   img.writeImage("feature.bmp");
+
+  
   return 0;
 }

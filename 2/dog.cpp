@@ -1,6 +1,13 @@
-#include "image.cpp"
-#include "histogram.cpp"
-#include "util.cpp"
+#include "image.h"
+#include "histogram.h"
+#include "util.h"
+
+Image img;
+Mat img_copy;
+int size1=2,size2=6;
+int threshold1=5,threshold2=25;
+string window_name="Edge Detection";
+
 float** getGaussianMask(int N,double sigma=-1){
 	assert(N%2 && "Size should be odd.");
 	if(sigma<=0)sigma=0.3*((N-1)*0.5-1)+0.8;
@@ -24,12 +31,7 @@ float** getGaussianMask(int N,double sigma=-1){
 	}
 	return m;
 }
-void dogOpenCV(Image& in,int ksize1,int ksize2){
-	Mat m1=in.mat.clone(),m2=in.mat.clone();
-	GaussianBlur(m1,m1,Size(ksize1,ksize1),0,0,BORDER_DEFAULT);
-	GaussianBlur(m2,m2,Size(ksize2,ksize2),0,0,BORDER_DEFAULT);	
-	in.mat=m1-m2;
-}
+
 void dogSelf(int N=11,double sigma=11,double sigma1=1){
 	puts("Self implemented Difference of Gaussian...");
 	float** mask=getGaussianMask(N,sigma);
@@ -43,23 +45,35 @@ void dogSelf(int N=11,double sigma=11,double sigma1=1){
 	imwrite("dog.bmp",img.mat-img1.mat);
 	puts("Done.");
 }
-void hysteresis(Image &in,uint8_t lower,uint8_t upper){
-	puts("Removing weak edges...");
-	Mat tmp=in.mat.clone();
+void hysteresis(int,void*);
+void dogOpenCV(int, void*){
+	img.mat=img_copy.clone();
+	int ksize1=2*size1+1;
+	int ksize2=2*size2+1;
+	Mat m1=img.mat.clone(),m2=img.mat.clone();
+	GaussianBlur(m1,m1,Size(ksize1,ksize1),0,0,BORDER_DEFAULT);
+	GaussianBlur(m2,m2,Size(ksize2,ksize2),0,0,BORDER_DEFAULT);	
+	img.mat=m1-m2;
+	hysteresis(0,0);
+}
+void hysteresis(int, void*){
+	int lower=threshold1;
+	int upper=threshold2;
+	Mat tmp=img.mat.clone();
 	int mini=MAX_INTENSITY,maxi=0;
-	for(int i=0;i<in.h;++i)
-		for(int j=0;j<in.w;++j){
+	for(int i=0;i<img.h;++i)
+		for(int j=0;j<img.w;++j){
 			if(tmp.at<uchar>(i,j)>maxi)
 				maxi=tmp.at<uchar>(i,j);
 			if(tmp.at<uchar>(i,j)<mini)
 				mini=tmp.at<uchar>(i,j);
 		}
-	lower=uint32_t(lower*maxi)/100;
-	upper=uint32_t(upper*maxi)/100;
+	lower=(lower*maxi)/100;
+	upper=(upper*maxi)/100;
 	
-	for(int i=0;i<in.h;++i){
-		for(int j=0;j<in.w;++j){
-			uchar& c=in.mat.at<uchar>(i,j);
+	for(int i=0;i<img.h;++i){
+		for(int j=0;j<img.w;++j){
+			uchar& c=img.mat.at<uchar>(i,j);
 			if(c<lower){
 				c=0;continue;
 			}
@@ -69,9 +83,9 @@ void hysteresis(Image &in,uint8_t lower,uint8_t upper){
 			int flag=0;
 			for(int m=-1;m<=1;m++){
 				for(int n=-1;n<=1;n++){
-					if(i+m<0 || i+m>=in.h)continue;
-					if(j+n<0 || j+n>=in.w)continue;
-					if(in.mat.at<uchar>(i+m,j+n)>upper){
+					if(i+m<0 || i+m>=img.h)continue;
+					if(j+n<0 || j+n>=img.w)continue;
+					if(img.mat.at<uchar>(i+m,j+n)>upper){
 						flag=1;
 						break;
 					}
@@ -82,17 +96,28 @@ void hysteresis(Image &in,uint8_t lower,uint8_t upper){
 			else c=0;
 		}
 	}
-	puts("Done.");
+	imshow(window_name, img.mat);
+	img.writeImage("edge.bmp");
 }
+
 int main(int argc,char** argv){
-	if(argc<6){
-		puts("Invalid arguments!");
+	if(argc<2){
+		puts("Usage: <application> <image-name>");
 		exit(1);
 	}
-	Image img1(argv[1]);
-	img1.loadImage(true);
-	dogOpenCV(img1,atoi(argv[2]),atoi(argv[3]));
-	hysteresis(img1,atoi(argv[4]),atoi(argv[5]));
-	img1.writeImage("edge.bmp");
+	img.name=string(argv[1]);
+	img.loadImage(true);
+	img_copy=img.mat.clone();
+	namedWindow( window_name,CV_WINDOW_AUTOSIZE);
+
+  createTrackbar( "Kernel_small:", window_name, &size1,50,dogOpenCV);
+  createTrackbar( "Kernel_big:", window_name, &size2,50,dogOpenCV);
+  createTrackbar( "Threshold_small:", window_name, &threshold1,100,dogOpenCV);
+  createTrackbar( "Threshold_big:", window_name, &threshold2,100, dogOpenCV);
+  
+	dogOpenCV(0,0);
+	hysteresis(0,0);
+		
+	waitKey(0);
 	return 0;
 }

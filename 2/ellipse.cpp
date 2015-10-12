@@ -5,31 +5,13 @@
 #include "util.h"
 using namespace cv;
 
-Mat src;
-Mat src_gray;
-int thresh = 100;
+Mat src,src_gray;
+int thresh = 50;
 int max_thresh = 255;
 RNG rng(12345);
+string source_window("Source");
 
-void thresh_callback(int, void* );
-
-int main( int argc, char** argv ){
-	src = imread( argv[1], 1 );
-
-	cvtColor( src, src_gray, CV_BGR2GRAY );
-	blur( src_gray, src_gray, Size(3,3) );
-
-	string source_window("Source");
-	namedWindow( source_window.c_str(),CV_WINDOW_AUTOSIZE);
-	imshow( source_window, src );
-
-	createTrackbar( " Threshold:", "Source", &thresh, max_thresh, thresh_callback );
-	thresh_callback(0,0);
-	waitKey(0);
-	return(0);
-}
-
-void thresh_callback(int, void* ){
+void thresh_callback(int, void*){
 	Mat threshold_output,crop_output;
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
@@ -72,8 +54,27 @@ void thresh_callback(int, void* ){
 	}
 	img.writeImage("face.bmp");
 
-	imshow( "Contours", drawing );
-	imshow( "Contours1", drawing_edge);
-	imwrite("controus.bmp",drawing);
-	imwrite( "Contours1.bmp", drawing_edge);
+	imshow( "crop_coutour",drawing);
+	imshow( "feature_countour",drawing_edge);
+	imwrite("crop_coutour.bmp",drawing);
+	imwrite( "feature_countour.bmp",drawing_edge);
+}
+
+int main( int argc, char** argv ){
+	if(argc<2){
+		puts("Usage: <exe> <image-name>");
+		return 1;
+	}
+	src = imread(argv[1],1);
+
+	cvtColor(src,src_gray,CV_BGR2GRAY );
+	blur( src_gray, src_gray, Size(3,3));
+
+	namedWindow( source_window.c_str(),CV_WINDOW_AUTOSIZE);
+	imshow( source_window, src );
+
+	createTrackbar( " Threshold:", "Source", &thresh, max_thresh, thresh_callback );
+	thresh_callback(0,0);
+	waitKey(0);
+	return(0);
 }

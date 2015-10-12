@@ -150,14 +150,3 @@ void quantize(Image &in){
 	}
 	imwrite("median.bmp",out);
 }
-// int main(int argc, char** argv){
-// 	if(argc<3){
-// 		puts("Usage: a <image_name> <color>");
-// 		return 1;
-// 	}
-// 	max_colors=atoi(argv[2]);
-// 	Image in(to_string(argv[1]));
-// 	in.loadImage(false);
-// 	quantize(in);
-// 	return 0;
-// }
