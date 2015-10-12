@@ -1,0 +1,7 @@
+left eye
+right eye
+node l,m,r
+lip l,mU,mD,r
+chin
+earLD,LU,RD,RU
+foreheadTOP

@@ -62,7 +62,7 @@ void bilateral(){
 
 int main(int argc,char** argv){
   if(argc<4){
-    puts("Usage: <application> <image-name>");
+    puts("Usage: <application> <image-name> <sigmaSpace> <sigmaColor>");
     exit(1);
   }
   img.name=string(argv[1]);
