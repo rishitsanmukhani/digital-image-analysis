@@ -4,7 +4,7 @@
 
 Image img;
 Mat img_copy;
-int size1=2,size2=6;
+int size1=1,size2=5;
 int threshold1=5,threshold2=25;
 string window_name="Edge Detection";
 

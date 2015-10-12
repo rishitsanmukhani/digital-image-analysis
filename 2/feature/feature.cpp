@@ -1,5 +1,4 @@
 #include "median_cut.h"
-
 void cropFace(Image& img){
   quantize(img);
   Image ref("median.bmp");
