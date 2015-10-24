@@ -16,6 +16,11 @@ using namespace std;
 
 int numRowsToDelete, numColToDelete, currEnergy=0;
 
+
+bool** choiceDP;
+pair<int,Mat>** DP;
+
+
 int min(int a, int b, int c){
 	if(a<b){
 		if(a<c) return a;
@@ -32,11 +37,10 @@ int max(int a, int b){
 	else return a;
 }
 
-Mat energyIndivisual(Mat im){
+Mat energyIndivisual(Mat im, bool toDisplay){
 	Mat M(im.rows,im.cols, CV_32SC1);
 	Mat energyimage(im.rows,im.cols, CV_8UC1);
 	int maxima = 0;
-	int total = 0;
 
 	for (int i = 1; i < im.rows-1; ++i){
 		for (int j = 1; j < im.cols-1; ++j){
@@ -48,11 +52,9 @@ Mat energyIndivisual(Mat im){
 			int rj = im.at<Vec3b>(i,j-1)[2] - im.at<Vec3b>(i,j+1)[2];
 			M.at<int>(i,j) = sqrt(bi*bi + gi*gi + ri*ri + bj*bj + gj*gj + rj*rj);
 			maxima = max(maxima,M.at<int>(i,j));
-			total += M.at<int>(i,j);
 		}
 	}
 
-	currEnergy = total;
 
 	maxima /= 256;
 	if(maxima==0) maxima=1;
@@ -62,12 +64,15 @@ Mat energyIndivisual(Mat im){
 		}
 	}
 
-	imshow("energyInd",energyimage);
-	waitKey(1);
+	if(toDisplay){
+		imshow("energyInd",energyimage);
+		waitKey(1);
+	}
+
 	return M;
 }
 
-Mat energyCumRow(Mat energyInd, string name, bool displayTranspose){
+Mat energyCumRow(Mat energyInd, string name, bool displayTranspose, bool toDisplay){
 	Mat M(energyInd.rows,energyInd.cols, CV_32SC1); // actual
 	Mat cumEnergy(energyInd.rows,energyInd.cols, CV_8UC1); // just for display
 	int maxima = 0;
@@ -94,11 +99,13 @@ Mat energyCumRow(Mat energyInd, string name, bool displayTranspose){
 		}
 	}
 
-	if(displayTranspose)
-		imshow(name.c_str(),cumEnergy.t());
-	else
-		imshow(name.c_str(),cumEnergy);
-		
+	if(toDisplay){
+		if(displayTranspose)
+			imshow(name.c_str(),cumEnergy.t());
+		else
+			imshow(name.c_str(),cumEnergy);	
+	}
+
 	return M;
 }
 
@@ -144,17 +151,35 @@ Mat markSeamRow(Mat im, Mat energyCum){
 	return im;
 }
 
-Mat removeCol(Mat im, Mat energyCumRow){
+void showEnergyAndSeams(Mat im){
+	Mat energyInd = energyIndivisual(im,true);
+	Mat energyCumRow_ = energyCumRow(energyInd,"energyCumRow_",false,true);
+	Mat energyCumCol_ = energyCumRow(energyInd.t(),"energyCumCol_",true,true);
+
+	Mat markedRow = markSeamRow(im.clone(),energyCumRow_);
+	imshow("markedRow",markedRow);
+	Mat markedCol = markSeamRow(im.clone().t(),energyCumCol_);
+	imshow("markedCol",markedCol.t());
+	Mat markedAll = markSeamRow(markedRow.t(),energyCumCol_);
+	imshow("markedAll",markedAll.t());
+}
+
+//returns (value of seam, compressed mat)
+pair<int,Mat> removeCol(Mat im, string name, bool displayTranspose){
+
+	Mat energyCumRow_ = energyCumRow(energyIndivisual(im,false),name,displayTranspose,false);
+
 	Mat newIm(im.rows,im.cols-1, CV_8UC3);
 
 	Point minPt(im.rows-1,1);
-	int min = energyCumRow.at<int>(im.rows-2,1);
+	int min = energyCumRow_.at<int>(im.rows-2,1);
 	for(int j = 2; j < im.cols-1; ++j){
-		if(min > energyCumRow.at<int>(im.rows-2,j)){
+		if(min > energyCumRow_.at<int>(im.rows-2,j)){
 			minPt.y = j;
-			min = energyCumRow.at<int>(im.rows-2,j);
+			min = energyCumRow_.at<int>(im.rows-2,j);
 		}
 	}
+	int energySeam = min;
 
 	int currCol = 0;
 	for(int j = 0; j < im.cols; ++j){
@@ -164,23 +189,23 @@ Mat removeCol(Mat im, Mat energyCumRow){
 		}
 	}
 
-	for (int i = energyCumRow.rows-2; i >= 0; --i){
+	for (int i = energyCumRow_.rows-2; i >= 0; --i){
 		int j = minPt.y;
 		minPt.x = i;
 		int min = INT_MAX;
 		if(j!=1){
-			if(energyCumRow.at<int>(i,j-1) < min){
-				min = energyCumRow.at<int>(i,j-1);
+			if(energyCumRow_.at<int>(i,j-1) < min){
+				min = energyCumRow_.at<int>(i,j-1);
 				minPt.y = j-1;	
 			}
 		}
-		if(j!=energyCumRow.cols-2){
-			if(energyCumRow.at<int>(i,j+1) < min){
-				min = energyCumRow.at<int>(i,j+1);
+		if(j!=energyCumRow_.cols-2){
+			if(energyCumRow_.at<int>(i,j+1) < min){
+				min = energyCumRow_.at<int>(i,j+1);
 				minPt.y = j+1;
 			}
 		}
-		if(energyCumRow.at<int>(i,j) < min)
+		if(energyCumRow_.at<int>(i,j) < min)
 			minPt.y = j;
 
 		int currCol = 0;
@@ -192,7 +217,115 @@ Mat removeCol(Mat im, Mat energyCumRow){
 		}
 	}
 
-	return newIm;
+	return make_pair(energySeam,newIm);
+}
+
+void findPath(Mat im){
+	choiceDP = new bool*[numRowsToDelete+1];
+	for(int i = 0; i < numRowsToDelete+1; ++i){
+		choiceDP[i] = new bool[numColToDelete+1];
+	}
+	DP = new pair<int,Mat>*[2];
+	for(int i = 0; i < 2; ++i){
+		DP[i] = new pair<int,Mat>[numColToDelete+1];
+	}
+
+	//intializing DP
+	DP[0][0] = make_pair(0,im);
+	for(int j = 1; j < numColToDelete+1; ++j){
+		pair<int,Mat> M = removeCol(DP[0][j-1].second.clone(),"DP",false);
+		DP[0][j] = make_pair(DP[0][j-1].first+M.first, M.second);
+		choiceDP[0][j] = 0;
+	}
+	for(int i = 1; i < numRowsToDelete+1; ++i){
+		choiceDP[i][0] = 1;
+	}
+	pair<int,Mat> M = removeCol(DP[0][0].second.clone().t(),"DP",true);
+
+	M.second = M.second.t();
+	DP[1][0] = make_pair(DP[0][0].first+M.first, M.second);
+
+	int currRow = 1;
+	int predRow = 0;
+	for (int i = 1; i < numRowsToDelete+1; ++i){
+		currRow = i%2;
+		predRow = (currRow+1)%2;
+		for(int j = 1; j < numColToDelete+1; ++j){
+			pair<int,Mat> M0 = removeCol(DP[currRow][j-1].second.clone(),"DP",false);
+			pair<int,Mat> M1 = removeCol(DP[predRow][j].second.clone().t(),"DP",true);
+			M1.second = M1.second.t();
+
+			if(M0.first < M1.first){
+				DP[currRow][j] = make_pair(DP[currRow][j-1].first+M0.first, M0.second);
+				choiceDP[i][j] = 0;
+			}
+			else{
+				DP[currRow][j] = make_pair(DP[predRow][j].first+M1.first, M1.second);
+				choiceDP[i][j] = 1;
+			}
+		}
+	}
+}
+
+void compressWithDP(Mat im){
+	findPath(im);
+	/*
+	for(int i = 0; i < numRowsToDelete+1; ++i){
+		for(int j = 0; j < numColToDelete+1; ++j){
+			cout << choiceDP[i][j] << " ";
+		}
+		cout << endl;
+	}
+	*/
+	int currRow = numRowsToDelete;
+	int currCol = numColToDelete;
+	Mat compressedIm = im.clone();
+	for(int count = 0; count < numRowsToDelete+numColToDelete; ++count){
+		if(choiceDP[currRow][currCol] == 0){
+			compressedIm = removeCol(compressedIm,"compressing",false).second;
+			currCol--;
+		}
+		else{
+			compressedIm = removeCol(compressedIm.t(),"compressing",true).second;
+			compressedIm = compressedIm.t();
+			currRow--;
+		}
+		imshow("Compressing image",compressedIm);
+		waitKey(10);
+	}
+}
+
+void comressWithoutDP(Mat im){
+
+	//ROW FIRST
+	Mat compRowFirst = im.clone().t();
+	for(int count = 0; count < numRowsToDelete; ++count){
+		compRowFirst = removeCol(compRowFirst,"energyCumCol_",true).second;
+		imshow("compRowFirst",compRowFirst.t());
+		waitKey(1);
+	}
+
+	compRowFirst = compRowFirst.t();
+	for(int count = 0; count < numColToDelete; ++count){
+		compRowFirst = removeCol(compRowFirst,"energyCumRow_",false).second;
+		imshow("compRowFirst",compRowFirst);
+		waitKey(1);
+	}
+
+	//COLUMN FIRST
+	Mat compColFirst = im.clone();
+	for(int count = 0; count < numColToDelete; ++count){
+		compColFirst = removeCol(compColFirst,"energyCumRow_",false).second;
+		imshow("compColFirst",compColFirst);
+		waitKey(1);
+	}
+
+	compColFirst = compColFirst.t();
+	for(int count = 0; count < numRowsToDelete; ++count){
+		compColFirst = removeCol(compColFirst,"energyCumCol_",true).second;
+		imshow("compColFirst",compColFirst.t());
+		waitKey(1);
+	}
 }
 
 int main(int argc, char *argv[]){
@@ -206,36 +339,18 @@ int main(int argc, char *argv[]){
 	istringstream ss2(argv[3]);
 	ss2 >> numColToDelete;
 
-	Mat energyInd = energyIndivisual(im);
-	Mat energyCumRow_ = energyCumRow(energyInd,"energyCumRow_",false);
-	Mat energyCumCol_ = energyCumRow(energyInd.t(),"energyCumCol_",true);
-	Mat markedRow = markSeamRow(im.clone(),energyCumRow_);
-	imshow("markedRow",markedRow);
-	Mat markedCol = markSeamRow(im.clone().t(),energyCumCol_);
-	imshow("markedCol",markedCol.t());
-	Mat markedAll = markSeamRow(markedRow.t(),energyCumCol_);
-	// imshow("markedAll",markedAll.t());
-
-	waitKey(0);
-	Mat compressedImageCol = im.clone();
-	for(int count = 0; count < numColToDelete; ++count){
-		Mat energyInd = energyIndivisual(compressedImageCol);
-		Mat energyCumRow_ = energyCumRow(energyInd,"energyCumRow_",false);
-		compressedImageCol = removeCol(compressedImageCol,energyCumRow_);
-		imshow("compressedImageCol",compressedImageCol);
-		waitKey(1);
-	}
-
-	Mat compressedImageRow = im.clone().t();
-	for(int count = 0; count < numRowsToDelete; ++count){
-		Mat energyInd = energyIndivisual(compressedImageRow);
-		Mat energyCumCol_ = energyCumRow(energyInd,"energyCumCol_",true);
-		compressedImageRow = removeCol(compressedImageRow,energyCumCol_);
-		imshow("compressedImageRow",compressedImageRow.t());
-		waitKey(1);
-	}
-
 	imshow("original image",im);
+
+	cout << "showing energy and seams..." << endl;
+	showEnergyAndSeams(im);
+
+	cout << "Compressing without DP..." << endl;
+	comressWithoutDP(im);
+
+	cout << "Compressing with DP..." << endl;
+	compressWithDP(im);
+
+	cout << "Done!" << endl;
 
 	waitKey(0);
 }
