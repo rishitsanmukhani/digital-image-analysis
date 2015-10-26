@@ -1,6 +1,7 @@
 #include <string>
 #include <sstream>
 #include "image.h"
+#include <vector>
 using namespace std;
 
 #define MAX_INTENSITY 255
@@ -8,6 +9,8 @@ using namespace std;
 #define pb push_back
 #define mp make_pair
 
+typedef vector<int> vi;
+typedef vector<vector<int> > vvi;
 
 void applyMask(float** mask,int N,Image* img,double bias=0){
   assert(N%2 && "Size should be odd.");

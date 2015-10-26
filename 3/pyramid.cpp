@@ -1,13 +1,17 @@
 #include "util.h"
 
 #define KERNEL_SIZE 5
+#define LEVELS 4
 
 class Pyramid{
 public:
   Mat original;
   vector<Mat> gaussian_pyramid;
   vector<Mat> laplacian_pyramid;
+  vector<int> nseams_rows;
+  vector<int> nseams_cols;
   int levels;
+  int curr_level;
   double kernel[5][5];
   Pyramid(Mat& _original,int _l=1){
     assert(_l>0);
@@ -90,16 +94,72 @@ public:
     } 
     convolve(dst,dst,kernel,4.0);
   }
+  void seamDistribution(int rows,int cols){
+    nseams_rows.clear();nseams_cols.clear();
+    nseams_rows.resize(levels,0);
+    nseams_cols.resize(levels,0);
+    assert(rows<(1<<levels));
+    assert(cols<(1<<levels));
+    int idx=0;
+    while(rows!=0){
+      if(rows&1)
+        nseams_rows[idx] = (1<<idx);
+      rows >>=1;
+      idx++;
+    }
+    idx=0;
+    while(cols!=0){
+      if(cols&1)
+        nseams_cols[idx] = (1<<idx);
+      cols >>=1;
+      idx++;
+    }
+  }
+  void seamEnlargement(Mat& m_rows_tmp,Mat& m_cols_tmp,Mat& m_rows,Mat& m_cols){
+    m_rows = Mat::zeros(Size(m_rows_tmp.cols<<1,m_rows_tmp.rows<<1),CV_8UC1);
+    m_cols = Mat::zeros(Size(m_cols_tmp.cols<<1,m_cols_tmp.rows<<1),CV_8UC1);
+    for(int i=0;i<m_rows_tmp.rows;i++){
+      for(int j=0;j<m_rows_tmp.cols;j++){
+        if(m_rows_tmp.at<uchar>(i,j)==MAX_INTENSITY){
+          m_rows.at<uchar>(i<<1,j<<1)=MAX_INTENSITY;
+          m_rows.at<uchar>((i<<1)+1,j<<1)=MAX_INTENSITY;
+          m_rows.at<uchar>(i<<1,(j<<1)+1)=MAX_INTENSITY;
+          m_rows.at<uchar>((i<<1)+1,(j<<1)+1)=MAX_INTENSITY;
+        }
+      }
+    }
+    for(int i=0;i<m_cols_tmp.rows;i++){
+      for(int j=0;j<m_cols_tmp.cols;j++){
+        if(m_cols_tmp.at<uchar>(i,j)==MAX_INTENSITY){
+          m_cols.at<uchar>(i<<1,j<<1)=MAX_INTENSITY;
+          m_cols.at<uchar>((i<<1)+1,j<<1)=MAX_INTENSITY;
+          m_cols.at<uchar>(i<<1,(j<<1)+1)=MAX_INTENSITY;
+          m_cols.at<uchar>((i<<1)+1,(j<<1)+1)=MAX_INTENSITY;
+        }
+      }
+    }
+    curr_level--;
+  }
+  void seamCarving(){
+    seamDistribution(5,5);
+    curr_level=levels-1;
+    Mat output= gaussian_pyramid[curr_level];
+    Mat m_rows =Mat::zeros(Size(output.cols,output.rows),CV_8UC1);
+    Mat m_cols =Mat::zeros(Size(output.cols,output.rows),CV_8UC1);
+    Mat m_rows_tmp =Mat::zeros(Size(output.cols,output.rows),CV_8UC1);
+    Mat m_cols_tmp =Mat::zeros(Size(output.cols,output.rows),CV_8UC1);
+    while(curr_level>0){
+      seams(gaussian_pyramid[curr_level],m_rows,m_cols,nseams_rows[curr_level],nseams_cols[curr_level],nseams_rows[curr_level-1],nseams_cols[curr_level-1]);
+      m_rows_tmp = m_rows.clone();
+      m_cols_tmp = m_cols.clone();
+      seamEnlargement(m_rows_tmp,m_cols_tmp,m_rows,m_cols);
+    }
+  }
 };
 
 int main(int argc,char** argv){
-  Mat m1,m2;
-  m1=imread("test.bmp");
-  Pyramid p(m1,3);
-  imshow("original",p.gaussian_pyramid[0]);
-  imshow("laplace",p.laplacian_pyramid[0]);
-  p.upsample(p.gaussian_pyramid[1],m2);
-  imshow("test",m2+p.laplacian_pyramid[0]);
+  Mat m1;
+  Pyramid p(m1,LEVELS);
 
   waitKey(0);
   return 0;
