@@ -101,10 +101,10 @@ int max(int a, int b){
 	else return a;
 }
 
-Mat energyIndivisual(Mat im, bool toDisplay){
-	Mat M(im.rows,im.cols, CV_32SC1);
-	int maxima = 0;
+void energyIndivisual(Mat im, bool toDisplay,Mat& M){
 
+	int maxima = 0;
+	puts("energyIndivisual");
 	for (int i = 1; i < im.rows-1; ++i){
 		for (int j = 1; j < im.cols-1; ++j){
 			int bi = im.at<Vec3b>(i-1,j)[0] - im.at<Vec3b>(i+1,j)[0];
@@ -113,7 +113,7 @@ Mat energyIndivisual(Mat im, bool toDisplay){
 			int bj = im.at<Vec3b>(i,j-1)[0] - im.at<Vec3b>(i,j+1)[0];
 			int gj = im.at<Vec3b>(i,j-1)[1] - im.at<Vec3b>(i,j+1)[1];
 			int rj = im.at<Vec3b>(i,j-1)[2] - im.at<Vec3b>(i,j+1)[2];
-			M.at<int>(i,j) = sqrt(bi*bi + gi*gi + ri*ri + bj*bj + gj*gj + rj*rj);
+			M.at<int>(i,j) = int(sqrt(bi*bi + gi*gi + ri*ri + bj*bj + gj*gj + rj*rj));
 			maxima = max(maxima,M.at<int>(i,j));
 		}
 	}
@@ -130,13 +130,14 @@ Mat energyIndivisual(Mat im, bool toDisplay){
 		imshow("energyInd",energyimage);
 		waitKey(1);
 	}
-
-	return M;
+	puts("energyIndivisual end");
 }
 
-Mat energyCumVer(Mat energyInd, string name, bool displayTranspose, bool toDisplay){
-	Mat M(energyInd.rows,energyInd.cols, CV_32SC1); // actual
+void energyCumVer(Mat energyInd, string name, bool displayTranspose, bool toDisplay,Mat& M){
+	cout << "energyCumVer" << M.size() << endl;
 	int maxima = 0;
+
+	cout <<"start"<<endl;
 
 	for(int j = 1; j < energyInd.cols-1; ++j )
 		M.at<int>(0,j) = 0;
@@ -166,8 +167,8 @@ Mat energyCumVer(Mat energyInd, string name, bool displayTranspose, bool toDispl
 		else
 			imshow(name.c_str(),cumEnergy);	
 	}
+	cout <<"end"<<endl;
 
-	return M;
 }
 
 Mat indexMat(Mat m){
@@ -213,26 +214,37 @@ Mat removeVerSeams(Mat im, Mat seams, int numSeams){
 
 Mat markSeamVer(Mat im, int numSeams){
 
-	Mat ret(im.rows,im.cols,CV_8UC1,0);
+	Mat ret(im.rows,im.cols,CV_8UC1);
 
-	for (int count = 0; count < numSeams; ++count){
+	for (int cnt = 0; cnt < numSeams; ++cnt,cout<<cnt<<endl){
+		cout<<cnt<<" " <<numSeams<<endl;
 
-		Mat smaller = removeVerSeams(im,ret,count);
-		Mat energyCum = energyCumVer(energyIndivisual(smaller,false),"energyCum",false,false);
-		Mat retLocal(im.rows,im.cols-count,CV_8UC1,0);
+		Mat smaller = removeVerSeams(im,ret,cnt);
+		puts("Allocating..");
+		Mat energyInd = Mat::zeros(Size(smaller.cols,smaller.rows),CV_32SC1);
+		puts("done..");
+		energyIndivisual(smaller,false,energyInd);
+		puts("Allocating..");
+		Mat energyCum = Mat::zeros(Size(energyInd.cols,energyInd.rows), CV_32SC1);
+		puts("Done");
+		energyCumVer(energyInd,"energyCum",false,false,energyCum);
+		puts("Allocating..");
+		Mat retLocal(im.rows,im.cols-cnt,CV_8UC1);
+		puts("Done.");
 
 		int min = INT_MAX;
 		int minInd = 0;
-		for(int j = 1; j < im.cols-1; ++j){
-			if(min>energyCum.at<int>(im.rows-2,j)){
-				min = energyCum.at<int>(im.rows-2,j);
+		for(int j = 1; j < smaller.cols-1; ++j){
+			if(min>energyCum.at<int>(smaller.rows-2,j)){
+				min = energyCum.at<int>(smaller.rows-2,j);
 				minInd = j;
 			}
 		}
+		puts("this");
+		Point curr(smaller.rows-2,minInd);
 
-		Point curr(im.rows-2,minInd);
-		
 		retLocal.at<char>(curr.x,curr.y) = 255;
+
 		for (int i = energyCum.rows-3; i >= 1; --i){
 			int j = curr.y;
 			curr.x = i;
@@ -254,8 +266,9 @@ Mat markSeamVer(Mat im, int numSeams){
 
 			retLocal.at<char>(curr.x,curr.y) = 255;
 		}
-
+		puts("calling mergeSeams");
 		mergeSeams(ret,retLocal);
+		puts("returned");
 	}
 	
 	return ret;
@@ -267,13 +280,17 @@ void seam(Mat im, Mat oldSeamsHor, Mat oldSeamsVer, int numOldSeamsHor, int numO
 	Mat newIm2 = removeVerSeams(im,oldSeamsVer,numOldSeamsVer);
 
 	Mat newSeamsHor = markSeamVer(newIm1, numNewSeamsHor);
-	Mat newSeamsVer = markSeamVer(newIm2, numNewSeamsVer);
 
-	imshow("new1",newSeamsHor);
-	imshow("new2",newSeamsVer);
+// 	Mat newSeamsVer = markSeamVer(newIm2, numNewSeamsVer);
+// cout << "asdas" << endl;
 
-	mergeSeams(oldSeamsHor, newSeamsHor);
-	mergeSeams(oldSeamsVer, newSeamsVer);
+// 	// imshow("new1",newSeamsHor);
+// 	// imshow("new2",newSeamsVer);
+
+// 	mergeSeams(oldSeamsHor, newSeamsHor);
+// 	mergeSeams(oldSeamsVer, newSeamsVer);
+// cout << "asdas" << endl;
+
 }
 
 void showSeams(Mat im, Mat seamsHor, Mat seamsVer){
