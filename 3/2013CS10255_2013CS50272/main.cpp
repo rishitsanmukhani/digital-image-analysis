@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <math.h>
 #include <limits.h>
+#include "timer.h"
 
 using namespace cv;
 using namespace std;
@@ -19,7 +20,7 @@ int numRowsToDelete, numColToDelete, currEnergy=0;
 
 bool** choiceDP;
 pair<int,Mat>** DP;
-
+Timer t;
 
 int min(int a, int b, int c){
 	if(a<b){
@@ -318,6 +319,7 @@ void compressWithDP(Mat im){
 void comressWithoutDP(Mat im){
 
 	//ROW FIRST
+	t.reset();
 	Mat compRowFirst = im.clone().t();
 	for(int count = 0; count < numRowsToDelete; ++count){
 		compRowFirst = removeColDirectly(compRowFirst,"energyCumCol_",true).second;
@@ -331,7 +333,8 @@ void comressWithoutDP(Mat im){
 		imshow("compRowFirst",compRowFirst);
 		waitKey(1);
 	}
-
+	cout<<"Row First(Time taken): "<<t.elapsed()<<endl;
+	t.reset();
 	//COLUMN FIRST
 	Mat compColFirst = im.clone();
 	for(int count = 0; count < numColToDelete; ++count){
@@ -346,6 +349,7 @@ void comressWithoutDP(Mat im){
 		imshow("compColFirst",compColFirst.t());
 		waitKey(1);
 	}
+	cout<<"Column First(Time taken): "<<t.elapsed()<<endl;
 }
 
 int main(int argc, char *argv[]){
@@ -368,9 +372,11 @@ int main(int argc, char *argv[]){
 	comressWithoutDP(im);
 
 	cout << "Compressing with DP..." << endl;
+	t.reset();
 	compressWithDP(im);
+	cout<<"With dp(time taken): "<<t.elapsed()<<endl;
 	displayDP();
-
+	
 	cout << "Done!" << endl;
 
 	waitKey(0);

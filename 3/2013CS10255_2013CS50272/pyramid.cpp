@@ -1,7 +1,7 @@
 #include "util.h"
 #include "main_new.cpp"
 #define KERNEL_SIZE 5
-#define LEVELS 3
+#define LEVELS 4
 int R,C;
 
 vector<Mat> laplacian_pyramid;
@@ -119,19 +119,26 @@ public:
     nseams_rows.clear();nseams_cols.clear();
     nseams_rows.resize(levels,0);
     nseams_cols.resize(levels,0);
-    int idx=levels-1;
-    while(rows!=0){
-      nseams_rows[idx] = rows/(1<<idx);
+    int idx=0;
+    while(rows!=0 && idx<levels){
+      nseams_rows[idx] = (rows>>1)/(1<<idx);
       rows = rows - (1<<idx)*nseams_rows[idx];
-      idx--;
+      idx++;
     }
-
-    idx=levels-1;
-    while(cols!=0){
-      nseams_cols[idx] = cols/(1<<idx);
+    if(rows)
+      nseams_rows[0]+=rows,rows=0;
+    idx=0;
+    while(cols!=0 && idx<levels){
+      nseams_cols[idx] = (cols>>1)/(1<<idx);
       cols = cols - (1<<idx)*nseams_cols[idx];
-      idx--;
+      idx++;
     }
+    if(cols)
+      nseams_cols[0]+=cols,cols=0;
+    puts("Seam distribution...");
+    for(auto r:nseams_rows)cout<<r<<endl;
+    for(auto c:nseams_cols)cout<<c<<endl;
+    cout<<endl;
   }
   void seamEnlargement(Mat& m_rows_tmp,Mat& m_cols_tmp,Mat& m_rows,Mat& m_cols){
     m_rows = Mat::zeros(Size(m_rows_tmp.cols<<1,m_rows_tmp.rows<<1),CV_8UC1);
@@ -183,6 +190,11 @@ public:
       seam(gaussian_pyramid[curr_level],m_rows,m_cols,accumulated_rows,accumulated_cols,nseams_rows[curr_level],nseams_cols[curr_level]);
       accumulated_rows+=nseams_rows[curr_level];
       accumulated_cols+=nseams_cols[curr_level];
+      vvi waste;
+      if(R==0)
+        imwrite("vertical_seam"+to_string(curr_level)+".bmp",showSeams(gaussian_pyramid[curr_level],waste,m_cols,false));
+      else
+        imwrite("horizontal_seam"+to_string(curr_level)+".bmp",showSeams(gaussian_pyramid[curr_level],waste,m_rows.t(),false));
       times.push_back(tnew.elapsed());
       tnew.reset();
     }
@@ -204,7 +216,9 @@ int main(int argc,char** argv){
   int r=R,c=C;
   
   R=0,C=c;
+
   Mat m1=imread(argv[1]);
+  resize(m1,m1,Size(512,512));
   
   t.reset();
   Pyramid p(m1,LEVELS);
@@ -232,12 +246,12 @@ int main(int argc,char** argv){
   puts("");
   puts("Time for removing vertical seams:");
   for(int i=0;i<LEVELS;i++){
-    cout<<("Level "+to_string(i)+": ")<<times[i]<<" ms"<<endl;
+    cout<<("Level "+to_string(LEVELS-i)+": ")<<times[i]<<" ms"<<endl;
   }
   puts("");
   puts("Time for removing horizontal seams:");
   for(int i=0;i<LEVELS;i++){
-    cout<<("Level "+to_string(i)+": ")<<times[i+LEVELS]<<" ms"<<endl;
+    cout<<("Level "+to_string(LEVELS-i)+": ")<<times[i+LEVELS]<<" ms"<<endl;
   }
   puts("");
   puts("Done");

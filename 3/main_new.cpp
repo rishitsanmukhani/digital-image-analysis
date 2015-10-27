@@ -35,7 +35,7 @@ int max(int a, int b){
 	else return a;
 }
 
-void energyIndivisual(Mat im, bool toDisplay,vvi& M){
+void energyIndivisual1(Mat im, bool toDisplay,vvi& M){
 
 	int maxima = 0;
 	for (int i = 1; i < im.rows-1; ++i){
@@ -47,6 +47,33 @@ void energyIndivisual(Mat im, bool toDisplay,vvi& M){
 			int gj = im.at<Vec3b>(i,j-1)[1] - im.at<Vec3b>(i,j+1)[1];
 			int rj = im.at<Vec3b>(i,j-1)[2] - im.at<Vec3b>(i,j+1)[2];
 			M[i][j] = int(sqrt(bi*bi + gi*gi + ri*ri + bj*bj + gj*gj + rj*rj));
+			maxima = max(maxima,M[i][j]);
+		}
+	}
+
+	if(toDisplay){
+		Mat energyimage = Mat::zeros(Size(im.cols,im.rows), CV_8UC1);
+		maxima /= 255;
+		if(maxima==0) maxima=1;
+		for(int i = 1; i < im.rows-1; ++i){
+			for (int j = 1; j < im.cols-1; ++j){
+					energyimage.at<uchar>(i,j) = M[i][j]/maxima;
+			}
+		}
+		imshow("Individual energy",energyimage);
+		waitKey(1);
+	}
+}
+
+void energyIndivisual(Mat im, bool toDisplay,vvi& M){
+
+	int maxima = 0;
+	for (int i = 1; i < im.rows-1; ++i){
+		for (int j = 1; j < im.cols-1; ++j){
+			int b = im.at<Vec3b>(i-1,j)[0] + im.at<Vec3b>(i+1,j)[0] - 4*im.at<Vec3b>(i,j)[0] + im.at<Vec3b>(i,j-1)[0] + im.at<Vec3b>(i,j+1)[0];
+			int g = im.at<Vec3b>(i-1,j)[1] + im.at<Vec3b>(i+1,j)[1] - 4*im.at<Vec3b>(i,j)[1] + im.at<Vec3b>(i,j-1)[1] + im.at<Vec3b>(i,j+1)[1];
+			int r = im.at<Vec3b>(i-1,j)[2] + im.at<Vec3b>(i+1,j)[2] - 4*im.at<Vec3b>(i,j)[2] + im.at<Vec3b>(i,j-1)[2] + im.at<Vec3b>(i,j+1)[2];
+			M[i][j] = abs(b)+abs(r)+abs(g);
 			maxima = max(maxima,M[i][j]);
 		}
 	}
