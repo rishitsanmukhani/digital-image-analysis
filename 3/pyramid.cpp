@@ -1,8 +1,8 @@
 #include "util.h"
-
+#include "main_new.cpp"
 #define KERNEL_SIZE 5
-#define LEVELS 4
-
+#define LEVELS 3
+int R,C;
 class Pyramid{
 public:
   Mat original;
@@ -21,7 +21,6 @@ public:
     laplacian_pyramid.resize(levels,Mat());
     initGaussianKernel();
     createGaussianPyramid();
-    createLaplacianPyramid();
   }
   void initGaussianKernel(){
     Mat m;
@@ -98,21 +97,17 @@ public:
     nseams_rows.clear();nseams_cols.clear();
     nseams_rows.resize(levels,0);
     nseams_cols.resize(levels,0);
-    assert(rows<(1<<levels));
-    assert(cols<(1<<levels));
-    int idx=0;
+    int idx=levels-1;
     while(rows!=0){
-      if(rows&1)
-        nseams_rows[idx] = (1<<idx);
-      rows >>=1;
-      idx++;
+      nseams_rows[idx] = rows/(1<<idx);
+      rows = rows - (1<<idx)*nseams_rows[idx];
+      idx--;
     }
-    idx=0;
+    idx=levels-1;
     while(cols!=0){
-      if(cols&1)
-        nseams_cols[idx] = (1<<idx);
-      cols >>=1;
-      idx++;
+      nseams_cols[idx] = cols/(1<<idx);
+      cols = cols - (1<<idx)*nseams_cols[idx];
+      idx--;
     }
   }
   void seamEnlargement(Mat& m_rows_tmp,Mat& m_cols_tmp,Mat& m_rows,Mat& m_cols){
@@ -140,26 +135,40 @@ public:
     }
     curr_level--;
   }
-  void seamCarving(){
-    seamDistribution(5,5);
+  Mat seamCarving(){
+    seamDistribution(R,C);
     curr_level=levels-1;
     Mat output= gaussian_pyramid[curr_level];
-    Mat m_rows =Mat::zeros(Size(output.cols,output.rows),CV_8UC1);
+    Mat m_rows =Mat::zeros(Size(output.rows,output.cols),CV_8UC1);
     Mat m_cols =Mat::zeros(Size(output.cols,output.rows),CV_8UC1);
-    Mat m_rows_tmp =Mat::zeros(Size(output.cols,output.rows),CV_8UC1);
+    Mat m_rows_tmp =Mat::zeros(Size(output.rows,output.cols),CV_8UC1);
     Mat m_cols_tmp =Mat::zeros(Size(output.cols,output.rows),CV_8UC1);
+    seam(gaussian_pyramid[curr_level],m_rows,m_cols,0,0,nseams_rows[curr_level],nseams_cols[curr_level]);
     while(curr_level>0){
-      seams(gaussian_pyramid[curr_level],m_rows,m_cols,nseams_rows[curr_level],nseams_cols[curr_level],nseams_rows[curr_level-1],nseams_cols[curr_level-1]);
       m_rows_tmp = m_rows.clone();
       m_cols_tmp = m_cols.clone();
       seamEnlargement(m_rows_tmp,m_cols_tmp,m_rows,m_cols);
+      seam(gaussian_pyramid[curr_level],m_rows,m_cols,nseams_rows[curr_level+1],nseams_cols[curr_level+1],nseams_rows[curr_level],nseams_cols[curr_level]);
+      imshow("gaussian",gaussian_pyramid[curr_level]);
+      imshow("seams",m_cols);
     }
+    return removeBothSeamsVerFirst(gaussian_pyramid[curr_level],m_rows.t(),m_cols,R,C);
   }
 };
 
 int main(int argc,char** argv){
-  Mat m1;
+  R=atoi(argv[2]);
+  C=atoi(argv[3]);
+  int r=R,c=C;
+  
+  R=0,C=c;
+  Mat m1=imread(argv[1]);
   Pyramid p(m1,LEVELS);
+  m1=p.seamCarving();
+
+  R=r,C=0;
+  Pyramid p1(m1,LEVELS);
+  imshow("Compressed",p1.seamCarving());
 
   waitKey(0);
   return 0;

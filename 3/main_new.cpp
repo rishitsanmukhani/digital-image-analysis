@@ -236,8 +236,8 @@ Mat removeBothSeamsVerFirst(Mat im, Mat seamsHor, Mat seamsVer, int numSeamsHor,
 				c++;
 			}
 		}
-		if(c!=numSeamsHor)
-			cout << "shouldn't hor" << endl;
+		// if(c!=numSeamsHor)
+		// 	cout << "shouldn't hor" << endl;
 	}
 
 	for(int i = 0; i < im.rows; ++i){
@@ -247,8 +247,8 @@ Mat removeBothSeamsVerFirst(Mat im, Mat seamsHor, Mat seamsVer, int numSeamsHor,
 				c++;
 			}
 		}
-		if(c!=numSeamsVer)
-			cout << "shouldn't ver" << endl;
+		// if(c!=numSeamsVer)
+		// 	cout << "shouldn't ver" << endl;
 	}
 
 	for(int i = 0; i < im.rows; ++i){
@@ -260,8 +260,8 @@ Mat removeBothSeamsVerFirst(Mat im, Mat seamsHor, Mat seamsVer, int numSeamsHor,
 				++cnt;
 			}
 		}
-		if(im.cols-cnt!=numSeamsVer)
-			cout << "Error!" << endl;
+		// if(im.cols-cnt!=numSeamsVer)
+		// 	cout << "Error!" << endl;
 	}
 
 	imshow("newSeamsHor",newSeamsHor);
@@ -271,7 +271,7 @@ Mat removeBothSeamsVerFirst(Mat im, Mat seamsHor, Mat seamsVer, int numSeamsHor,
 // cout << "done" << endl;
 
 	Mat retFinal = Mat::zeros(Size(im.cols-numSeamsVer,im.rows-numSeamsHor),CV_8UC3);
-/*
+
 	for(int j = 0; j < ret.cols; ++j){
 		int cnt = 0;
 		for(int i = 0; i < ret.rows; ++i){
@@ -285,7 +285,7 @@ Mat removeBothSeamsVerFirst(Mat im, Mat seamsHor, Mat seamsVer, int numSeamsHor,
 			cout << j  << endl;
 		}
 	}
-	*/
+	
 // cout << "done" << endl;
 	return retFinal;
 }
@@ -320,13 +320,13 @@ Mat removeBothSeamsHorFirst(Mat im, Mat seamsHor, Mat seamsVer, int numSeamsHor,
 	return retFinal;
 }
 
-int main(int argc, char** argv){
-	Mat im = imread(argv[1]);
-	Mat empty1 = Mat::zeros(Size(im.rows,im.cols),CV_8UC1);
-	Mat empty2 = Mat::zeros(Size(im.cols,im.rows),CV_8UC1);
-	seam(im,empty1,empty2,0,0,atoi(argv[2]),atoi(argv[3]));
-	showSeams(im,empty1,empty2);
-	imshow("orig",im);
-	imshow("compressed",removeBothSeamsVerFirst(im,empty1.t(),empty2,atoi(argv[2]),atoi(argv[3])));
-	waitKey(0);
-}
+// int main(int argc, char** argv){
+// 	Mat im = imread(argv[1]);
+// 	Mat empty1 = Mat::zeros(Size(im.rows,im.cols),CV_8UC1);
+// 	Mat empty2 = Mat::zeros(Size(im.cols,im.rows),CV_8UC1);
+// 	seam(im,empty1,empty2,0,0,atoi(argv[2]),atoi(argv[3]));
+// 	showSeams(im,empty1,empty2);
+// 	imshow("orig",im);
+// 	imshow("compressed",removeBothSeamsVerFirst(im,empty1.t(),empty2,atoi(argv[2]),atoi(argv[3])));
+// 	waitKey(0);
+// }
