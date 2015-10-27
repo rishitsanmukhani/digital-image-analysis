@@ -1,7 +1,10 @@
+#pragma once
 #include <string>
 #include <sstream>
 #include "image.h"
 #include <vector>
+#include "timer.h"
+
 using namespace std;
 
 #define MAX_INTENSITY 255
