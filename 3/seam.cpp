@@ -55,20 +55,31 @@ public:
     cumulative_energy.resize(r,vi(c,0));
 
     Mat e;
+    cout<<tmp.type()<<endl;
+    cout<<tmp_x.type()<<endl;
+    cout<<tmp_y.type()<<endl;
+    cout<<curr_image.type()<<endl;
     Mat temp = Mat::zeros(Size(c,r),CV_8UC1);
     for(int i=0;i<temp.rows;i++){
       for(int j=0;j<temp.cols;j++){
         temp.at<uchar>(i,j) = tmp.at<Vec3s>(i,j)[0];
       }
     }
-    cout<<tmp.size()<<endl;
-    imshow("tmep",temp);
+    Mat temp1 = Mat::zeros(Size(c,r),CV_8UC1);
+    for(int i=0;i<temp1.rows;i++){
+      for(int j=0;j<temp1.cols;j++){
+        temp1.at<uchar>(i,j) = tmp.at<Vec3s>(i,j)[1];
+      }
+    }
+    imshow("temp",temp);
+    imshow("temp1",temp1);
+    
     e = Mat::zeros(Size(c,r),CV_8UC1);
     for(int i=0;i<r;i++){
       for(int j=0;j<c;j++){
         energy[i][j]=0;
-        for(int k=0;k<=2;k++)
-          energy[i][j]=int(tmp.at<Vec3s>(i,j)[k]);
+        // for(int k=0;k<=2;k++)
+          energy[i][j]=int(tmp.at<Vec3s>(i,j)[2]);
         // e.at<uchar>(i,j)=(energy[i][j]*255)/(3.0*(1<<16));
         // e.at<uchar>(i,j)=100;
         e.at<uchar>(i,j)=energy[i][j];

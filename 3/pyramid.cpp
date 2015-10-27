@@ -3,13 +3,14 @@
 #define KERNEL_SIZE 5
 #define LEVELS 3
 int R,C;
+
+vector<Mat> laplacian_pyramid;
+
 class Pyramid{
 public:
   Mat original;
   vector<Mat> gaussian_pyramid;
-  vector<Mat> laplacian_pyramid;
-  vector<int> nseams_rows;
-  vector<int> nseams_cols;
+  vector<int> nseams_rows,nseams_cols;
   int levels;
   int curr_level;
   double kernel[5][5];
@@ -18,9 +19,12 @@ public:
     original=_original;
     levels=_l;
     gaussian_pyramid.resize(levels,Mat());
-    laplacian_pyramid.resize(levels,Mat());
     initGaussianKernel();
     createGaussianPyramid();
+    if(laplacian_pyramid.size()==0){
+      laplacian_pyramid.resize(levels-1,Mat());
+      createLaplacianPyramid();
+    }
   }
   void initGaussianKernel(){
     Mat m;
@@ -51,10 +55,22 @@ public:
       laplacian_pyramid[i]=gaussian_pyramid[i]-tmp;
     }
   }
+  void displayGaussianPyramid(){
+    string s="G_Level_";
+    for(int i=0;i<gaussian_pyramid.size();i++){
+      imwrite(s+to_string(i)+".bmp",gaussian_pyramid[i]);
+    }
+  }
+  void displayLaplacianPyramid(){
+    string s="L_Level_";
+    for(int i=0;i<laplacian_pyramid.size();i++){
+      imwrite(s+to_string(i)+".bmp",laplacian_pyramid[i]);
+    }
+  }
   void convolve(Mat& src,Mat& dst,const double mask[5][5],double factor=1.0){
     Mat tmp=src.clone();
     dst = src.clone();
-    const int N=5; //Kernel size
+    const int N=5;
 
     for(int i=0;i<src.rows;++i){
       for(int j=0;j<src.cols;++j){
@@ -165,7 +181,8 @@ int main(int argc,char** argv){
   Mat m1=imread(argv[1]);
   Pyramid p(m1,LEVELS);
   m1=p.seamCarving();
-
+  p.displayLaplacianPyramid();
+  p.displayGaussianPyramid();
   R=r,C=0;
   Pyramid p1(m1,LEVELS);
   imshow("Compressed",p1.seamCarving());
