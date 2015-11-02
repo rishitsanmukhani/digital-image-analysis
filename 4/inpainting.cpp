@@ -3,7 +3,7 @@
 
 enum Pos{OUT=0,BOUNDARY=1,IN=2};
 
-const float lambda = 0.5;
+const float lambda = 0.25;
 class Inpaint{
 public:
   Image img;
@@ -54,9 +54,13 @@ public:
   }
 
 };
-int main(){
+int main(int argc,char** argv){
+  if(argc<2){
+    puts("Invalid arguments!");
+    return 1;
+  }
   Inpaint p("test.bmp");
-  p.isotropicDiffusion(2);
+  p.isotropicDiffusion(atoi(argv[1]));
   p.img.write("out.bmp");
   return 0;
 }
