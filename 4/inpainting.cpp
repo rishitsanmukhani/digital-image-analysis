@@ -56,13 +56,14 @@ public:
     }
   }
   float dce(float _grad_mag,float _kappa=kappa){
-    return exp((_grad_mag/_kappa)*(_grad_mag/_kappa));
+    return exp(-(_grad_mag/_kappa)*(_grad_mag/_kappa));
   }
   float dcq(float _grad_mag,float _kappa=kappa){
     return (1.0f/(1.0f + (_grad_mag/_kappa)*(_grad_mag/_kappa)));
   }
   void anisotropicDiffusion(int itr,float _kappa=kappa,int option=0){
     assert(_kappa>0);
+    int cnt=0;
     for(int i=0;i<itr;i++){
       printf("Iteration:%d\n",i+1);
       Mat m=img.mat.clone();
@@ -70,8 +71,16 @@ public:
         for(int c=1;c<img.mat.cols-1;c++){
           for(int k=0;k<=2;k++){
             float ge=gradE(r,c,k),gw=gradW(r,c,k),gn=gradN(r,c,k),gs=gradS(r,c,k);
+            // printf("%f %f %f %f\n",ge,gw,gn,gs);
+            // printf("%f %f %f %f %f\n",dce(ge)*ge,dce(gw)*gw,dce(gn)*gn,dce(gs)*gs,dce(ge)*ge + dce(gw)*gw +dce(gn)*gn +dce(gs)*gs);
+            // printf("%f\n",dce(ge)*ge + dce(gw)*gw +dce(gn)*gn +dce(gs)*gs);
+            float delta= dce(ge)*ge + dce(gw)*gw +dce(gn)*gn +dce(gs)*gs;
+            if(delta>255)
+              delta=255;
+            if(delta<-255)
+              delta=-255;
             if(option==0)
-              m.at<Vec3i>(r,c)[k] = img.mat.at<Vec3i>(r,c)[k] + lambda*(dce(ge)*ge + dce(gw)*gw +dce(gn)*gn +dce(gs)*gs);
+              m.at<Vec3i>(r,c)[k] = img.mat.at<Vec3i>(r,c)[k] + lambda*(delta);
             else
               m.at<Vec3i>(r,c)[k] = img.mat.at<Vec3i>(r,c)[k] + lambda*(dcq(ge)*ge + dcq(gw)*gw +dcq(gn)*gn +dcq(gs)*gs);
           }
