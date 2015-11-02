@@ -3,8 +3,11 @@
 #include <sstream>
 #include <vector>
 #include "image.h"
+#include <functional>
+
 
 using namespace std;
+using namespace std::placeholders;
 
 #define MAX_INTENSITY 255
 #define PI 3.14159265
