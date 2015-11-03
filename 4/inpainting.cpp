@@ -4,34 +4,34 @@
 enum Pos{OUT=0,BOUNDARY=1,IN=2};
 
 float lambda = 0.25;
-float kappa = 0.2; 
+float kappa = 20; 
+float delta_t = 0.1;
+int Rmin=20,Rmax=50,Cmin=20,Cmax=30;
 class Inpaint{
 public:
   Image img;
   Mat original;
-  vector<vector<Vector> > gra;
-
   Inpaint(string _s):img(_s){
     img.load();
-    img.mat.convertTo(img.mat,CV_32S);
+    // img.mat.convertTo(img.mat,CV_32S);
     original=img.mat.clone();
   }
   ~Inpaint(){
   }
-  inline Vector gradient(int r,int c,int k)const{
-    return Vector(gradE(r,c,k)-gradW(r,c,k),gradN(r,c,k)-gradS(r,c,k));
-  }
   inline int gradN(int r,int c,int k)const{
-    return img.mat.at<Vec3i>(r-1,c)[k]-img.mat.at<Vec3i>(r,c)[k];
+    return img.mat.at<Vec3b>(r-1,c)[k]-img.mat.at<Vec3b>(r,c)[k];
   }
   inline int gradS(int r,int c,int k)const{
-    return img.mat.at<Vec3i>(r+1,c)[k]-img.mat.at<Vec3i>(r,c)[k];
+    return img.mat.at<Vec3b>(r+1,c)[k]-img.mat.at<Vec3b>(r,c)[k];
   }
   inline int gradE(int r,int c,int k)const{
-    return img.mat.at<Vec3i>(r,c+1)[k]-img.mat.at<Vec3i>(r,c)[k];
+    return img.mat.at<Vec3b>(r,c+1)[k]-img.mat.at<Vec3b>(r,c)[k];
   }
   inline int gradW(int r,int c,int k)const{
-    return img.mat.at<Vec3i>(r,c-1)[k]-img.mat.at<Vec3i>(r,c)[k];
+    return img.mat.at<Vec3b>(r,c-1)[k]-img.mat.at<Vec3b>(r,c)[k];
+  }
+  inline Vector gradient(int r,int c,int k)const{
+    return Vector((gradE(r,c,k)-gradW(r,c,k))>>1,(gradS(r,c,k)-gradN(r,c,k))>>1);
   }
   inline Vector laplacian(int r,int c,int k)const{
     return Vector(gradE(r,c,k)+gradW(r,c,k),gradN(r,c,k)+gradS(r,c,k));
@@ -48,7 +48,7 @@ public:
       for(int r=1;r<img.mat.rows-1;r++){
         for(int c=1;c<img.mat.cols-1;c++){
           for(int k=0;k<=2;k++){
-            m.at<Vec3i>(r,c)[k] = img.mat.at<Vec3i>(r,c)[k] + lambda*(gradE(r,c,k)+gradW(r,c,k)+gradN(r,c,k)+gradS(r,c,k));
+            m.at<Vec3b>(r,c)[k] = img.mat.at<Vec3b>(r,c)[k] + lambda*(gradE(r,c,k)+gradW(r,c,k)+gradN(r,c,k)+gradS(r,c,k));
           }
         }
       }
@@ -63,49 +63,83 @@ public:
   }
   void anisotropicDiffusion(int itr,float _kappa=kappa,int option=0){
     assert(_kappa>0);
-    int cnt=0;
     for(int i=0;i<itr;i++){
-      printf("Iteration:%d\n",i+1);
+      // printf("Iteration:%d\n",i+1);
       Mat m=img.mat.clone();
-      for(int r=1;r<img.mat.rows-1;r++){
-        for(int c=1;c<img.mat.cols-1;c++){
+      for(int r=Rmin;r<Rmax;r++){
+        for(int c=Cmin;c<Cmax;c++){
           for(int k=0;k<=2;k++){
             float ge=gradE(r,c,k),gw=gradW(r,c,k),gn=gradN(r,c,k),gs=gradS(r,c,k);
-            // printf("%f %f %f %f\n",ge,gw,gn,gs);
-            // printf("%f %f %f %f %f\n",dce(ge)*ge,dce(gw)*gw,dce(gn)*gn,dce(gs)*gs,dce(ge)*ge + dce(gw)*gw +dce(gn)*gn +dce(gs)*gs);
-            // printf("%f\n",dce(ge)*ge + dce(gw)*gw +dce(gn)*gn +dce(gs)*gs);
-            float delta= dce(ge)*ge + dce(gw)*gw +dce(gn)*gn +dce(gs)*gs;
-            if(delta>255)
-              delta=255;
-            if(delta<-255)
-              delta=-255;
             if(option==0)
-              m.at<Vec3i>(r,c)[k] = img.mat.at<Vec3i>(r,c)[k] + lambda*(delta);
+              m.at<Vec3b>(r,c)[k] = img.mat.at<Vec3b>(r,c)[k] + lambda*(dce(ge)*ge + dce(gw)*gw +dce(gn)*gn +dce(gs)*gs);
             else
-              m.at<Vec3i>(r,c)[k] = img.mat.at<Vec3i>(r,c)[k] + lambda*(dcq(ge)*ge + dcq(gw)*gw +dcq(gn)*gn +dcq(gs)*gs);
+              m.at<Vec3b>(r,c)[k] = img.mat.at<Vec3b>(r,c)[k] + lambda*(dcq(ge)*ge + dcq(gw)*gw +dcq(gn)*gn +dcq(gs)*gs);
           }
         }
       }
       img.mat=m.clone();
     }
   }
+  inline float sq(float x)const{
+    return (x*x);
+  }
+  float slopeLimiter(int r,int c,int k,float beta)const{
+    int xf=gradE(r,c,k),xb=-gradW(r,c,k),yf=gradS(r,c,k),yb=-gradN(r,c,k);
+    if(beta>0) return sqrt(sq(min(xb,0))+sq(max(xf,0))+sq(min(yb,0))+sq(max(yf,0)));
+    else return sqrt(sq(max(xb,0))+sq(min(xf,0))+sq(max(yb,0))+sq(min(yf,0)));
+  }
+  void isotopicDiffusion(int itr){
+    for(int r=Rmin;r<Rmax;r++){
+      for(int c=Cmin;c<Cmax;c++){
+        for(int k=0;k<=2;k++){
+          img.mat.at<Vec3b>(r,c)[k]=0;
+        }
+      }
+    }
+    int cnt=0;
+    for(int i=0;i<itr;i++){
+      cnt++;
+      // printf("Isotopic iteration: %d\n",i+1);
+      Mat m=img.mat.clone();
+      for(int r=Rmin;r<Rmax;r++){
+        for(int c=Cmin;c<Cmax;c++){
+          for(int k=0;k<=2;k++){
+            Vector grad = gradient(r,c,k);
+            Vector N = grad.normal();
+            if(N.norm()==0)continue;
+            Vector deltaL = laplacianDiff(r,c,k);
+            float beta = (deltaL*N)*1.0f/float(N.norm());
+            float slope_limiter = slopeLimiter(r,c,k,beta);
+            float val=delta_t*beta*slope_limiter;
+            if(val<-255)
+              val=-255;
+            if(val>255)
+              val=255;
+
+            m.at<Vec3b>(r,c)[k] = img.mat.at<Vec3b>(r,c)[k] + val;
+          }
+        }
+      }
+      img.mat=m.clone();
+      if(cnt==15){
+        cnt=0;
+        anisotropicDiffusion(2);
+      }
+    }
+  }
 };
 int main(int argc,char** argv){
-  if(argc<4){
+  if(argc<6){
     puts("Invalid arguments!");
     return 1;
   }
+  Rmin=atoi(argv[1]);
+  Rmax=atoi(argv[2]);
+  Cmin=atoi(argv[3]);
+  Cmax=atoi(argv[4]);
   Inpaint p("test.bmp");
-  p.isotropicDiffusion(atoi(argv[1]));
-  p.img.write("out.bmp");
+  p.isotopicDiffusion(atoi(argv[5]));
+  p.img.write("paint.bmp");
 
-  p.img.mat = p.original.clone();
-  kappa = atof(argv[2]);
-  lambda = atof(argv[3]);
-  p.anisotropicDiffusion(atoi(argv[1]),kappa);
-  p.img.write("aniso.bmp");
-  p.img.mat.convertTo(p.img.mat,CV_8U);
-  imshow("aniso",p.img.mat);
-  waitKey(0);
   return 0;
 }

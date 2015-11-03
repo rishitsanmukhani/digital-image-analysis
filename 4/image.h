@@ -24,9 +24,14 @@ public:
 			puts("Error loading image...");
 			exit(1);
 		}
+		// Mat tmp;
+		// cvtColor(mat,tmp,COLOR_BGR2YUV);
+		// mat=tmp.clone();
 		h=mat.rows;w=mat.cols;
 	}
 	void write(string _name){
+		// Mat tmp;
+		// cvtColor(mat,tmp,COLOR_YUV2BGR);
 		if(!imwrite(_name,mat)){
 			puts("Error writing image...");
 			exit(1);

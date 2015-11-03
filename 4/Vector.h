@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <cstdio>
 using namespace std;
 class Vector{
 public:
@@ -38,5 +39,8 @@ public:
   }
   Vector normal()const{
     return Vector(-y,x);
+  }
+  void print()const{
+    printf("%d %d\n",x,y);
   }
 };
