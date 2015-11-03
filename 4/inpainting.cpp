@@ -88,6 +88,10 @@ public:
     if(beta>0) return sqrt(sq(min(xb,0))+sq(max(xf,0))+sq(min(yb,0))+sq(max(yf,0)));
     else return sqrt(sq(max(xb,0))+sq(min(xf,0))+sq(max(yb,0))+sq(min(yf,0)));
   }
+  void clamp(int32_t& c){
+    if(c>255)c=255;
+    if(c<-255)c=-255;
+  }
   void isotopicDiffusion(int itr){
     for(int r=Rmin;r<Rmax;r++){
       for(int c=Cmin;c<Cmax;c++){
@@ -111,19 +115,16 @@ public:
             float beta = (deltaL*N)*1.0f/float(N.norm());
             float slope_limiter = slopeLimiter(r,c,k,beta);
             float val=delta_t*beta*slope_limiter;
-            if(val<-255)
-              val=-255;
-            if(val>255)
-              val=255;
-
-            m.at<Vec3b>(r,c)[k] = img.mat.at<Vec3b>(r,c)[k] + val;
+            int32_t color = int(img.mat.at<Vec3b>(r,c)[k]) + val;
+            clamp(color);
+            m.at<Vec3b>(r,c)[k] = uint8_t(color);
           }
         }
       }
       img.mat=m.clone();
       if(cnt==15){
         cnt=0;
-        anisotropicDiffusion(2);
+        anisotropicDiffusion(5);
       }
     }
   }
