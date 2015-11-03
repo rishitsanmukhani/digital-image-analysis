@@ -1,23 +1,23 @@
 #include "seam.cpp"
+#include <set>
 
-vector<pair<int,int> > pointsToRem;
+Mat imInput;
+bool clicked = false;
+set<pair<int,int> > pointsToRem;
 int numRowRem = 0, numColRem = 0;
 
 
 void getPointsToRem(){
 	//update pointsToRem
 	//dont't take points on the boundary
-	for(int i = 320; i < 370; ++i){
-		for(int j = 40; j < 80; ++j){
-			pointsToRem.push_back(make_pair(i,j));
-		}
-	}
+	waitKey(0);
 }
 
 Mat getPointsToRem_Mat(int rows, int cols){
 	Mat ret = Mat::zeros(Size(cols,rows), CV_8UC1);
-	for(int i = 0; i < pointsToRem.size(); ++i){
-		ret.at<uchar>(pointsToRem[i].first, pointsToRem[i].second) = 255;
+	set<pair<int,int> >::iterator it;
+	for(it=pointsToRem.begin(); it!=pointsToRem.end(); ++it){
+		ret.at<uchar>((*it).first, (*it).second) = 255;
 	}
 	imshow("points to remove", ret);
 	waitKey(1);
@@ -26,8 +26,9 @@ Mat getPointsToRem_Mat(int rows, int cols){
 
 void modifyEnergy(Mat& energyInd){
 	//use pointsToRem
-	for(int i = 0; i < pointsToRem.size(); ++i){
-		pair<int,int> p = pointsToRem[i];
+	set<pair<int,int> >::iterator it;
+	for(it=pointsToRem.begin(); it!=pointsToRem.end(); ++it){
+		pair<int,int> p = *it;
 		energyInd.at<int>(p.first,p.second) = -1000;
 	}
 }
@@ -62,6 +63,34 @@ void process(Mat& im){
 
 }
 
+void CallBackFunc(int event, int x, int y, int flags, void* userdata){
+     if  ( event == EVENT_LBUTTONDOWN )
+     { 
+     	if(!((x==0 || x==imInput.cols-1) && (y==0 || y==imInput.rows-1))){
+     		// cout <<  x << " " << y << endl;
+			pair<int,int> p(y,x);
+			pointsToRem.insert(p);
+			Scalar color(0, 0, 255);
+			circle( imInput, Point(x,y), 2, color, FILLED, LINE_8, 0 );
+			imshow("Input", imInput);
+
+     	}
+     	clicked = true;
+     }
+	else if ( event == EVENT_LBUTTONUP){
+    	clicked = false;
+    }
+	else if (event == EVENT_MOUSEMOVE){
+		if(clicked){
+			pair<int,int> p(y,x);
+			pointsToRem.insert(p);
+			Scalar color(0, 0, 255);
+			circle( imInput, Point(x,y), 2, color, FILLED, LINE_8, 0 );
+			imshow("Input", imInput);			
+		}
+	}
+}
+
 int main(int argc, char *argv[]){
 	if(argc!=2){
 		cout << "Usage: img.exe <imgName>" << endl;
@@ -69,6 +98,9 @@ int main(int argc, char *argv[]){
 	}
 	Mat im = imread(argv[1]);
 	imshow("1. Original",im);
+	imInput = im.clone();
+	imshow("Input", imInput);
+	setMouseCallback("Input", CallBackFunc, NULL);
 	process(im);
 
 	waitKey(0);
