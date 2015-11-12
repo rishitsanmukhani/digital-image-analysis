@@ -29,7 +29,7 @@ void modifyEnergy(Mat& energyInd){
 	set<pair<int,int> >::iterator it;
 	for(it=pointsToRem.begin(); it!=pointsToRem.end(); ++it){
 		pair<int,int> p = *it;
-		energyInd.at<int>(p.first,p.second) = -1000;
+		energyInd.at<int>(p.first,p.second) = -10000;
 	}
 }
 
@@ -47,7 +47,6 @@ void process(Mat& im){
 	// horizontal
 	Mat energyCumHor_ = energyCumVer(energyInd.t(),"Cum-Energy Horizontal",false,true);
 	pair<Mat,int> horizontal = removeVerSeams(im.t(), energyCumHor_, PointsToRem_Mat_Hor, pointsToRem.size());
-
 	if(vertical.second < horizontal.second){
 		imshow("2. Object removed", vertical.first);
 		Mat reconstructed = expandCol(vertical.first,vertical.second);
@@ -64,29 +63,31 @@ void process(Mat& im){
 }
 
 void CallBackFunc(int event, int x, int y, int flags, void* userdata){
-     if  ( event == EVENT_LBUTTONDOWN )
-     { 
-     	if(!((x==0 || x==imInput.cols-1) && (y==0 || y==imInput.rows-1))){
-     		// cout <<  x << " " << y << endl;
-			pair<int,int> p(y,x);
-			pointsToRem.insert(p);
-			Scalar color(0, 0, 255);
-			circle( imInput, Point(x,y), 2, color, FILLED, LINE_8, 0 );
-			imshow("Input", imInput);
+	if  ( event == EVENT_LBUTTONDOWN )
+	{ 
+		if(x>=1 && x<=imInput.cols-2 && y>=1 && y<=imInput.rows-2){
+			// cout <<  x << " " << y << endl;
+		pair<int,int> p(y,x);
+		pointsToRem.insert(p);
+		Scalar color(0, 0, 255);
+		circle( imInput, Point(x,y), 2, color, FILLED, LINE_8, 0 );
+		imshow("Input", imInput);
 
-     	}
-     	clicked = true;
-     }
+		}
+		clicked = true;
+	}
 	else if ( event == EVENT_LBUTTONUP){
     	clicked = false;
     }
 	else if (event == EVENT_MOUSEMOVE){
 		if(clicked){
-			pair<int,int> p(y,x);
-			pointsToRem.insert(p);
-			Scalar color(0, 0, 255);
-			circle( imInput, Point(x,y), 2, color, FILLED, LINE_8, 0 );
-			imshow("Input", imInput);			
+			if(x>=1 && x<=imInput.cols-2 && y>=1 && y<=imInput.rows-2){
+				pair<int,int> p(y,x);
+				pointsToRem.insert(p);
+				Scalar color(0, 0, 255);
+				circle( imInput, Point(x,y), 2, color, FILLED, LINE_8, 0 );
+				imshow("Input", imInput);			
+			}
 		}
 	}
 }
@@ -99,6 +100,7 @@ int main(int argc, char *argv[]){
 	Mat im = imread(argv[1]);
 	imshow("1. Original",im);
 	imInput = im.clone();
+	cout << "Size " << im.rows << " " << im.cols << endl;
 	imshow("Input", imInput);
 	setMouseCallback("Input", CallBackFunc, NULL);
 	process(im);

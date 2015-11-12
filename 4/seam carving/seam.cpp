@@ -88,7 +88,6 @@ Mat energyCumVer(Mat energyInd, string name, bool displayTranspose, bool toDispl
 			maxima = max(maxima,M.at<int>(i,j));
 		}
 	}
-
 	if(toDisplay){
 		Mat cumEnergy(energyInd.rows,energyInd.cols, CV_8UC1); // just for display
 		maxima/=256;
